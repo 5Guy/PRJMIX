@@ -34,8 +34,10 @@ public class ChargingCar : MonoBehaviour
     [Header("치임 판정")]
     [Tooltip("비워두면 차체 크기에 맞춘 트리거(CarKillZone)를 자동으로 만들어 붙인다")]
     [SerializeField] private CarKillZone killZone;
-    [Tooltip("자동으로 만들 때, 차체 크기 대비 치임 판정의 크기 비율")]
-    [SerializeField] private float killZoneScale = 0.9f;
+    [Tooltip("자동으로 만들 때, 차체 크기 대비 치임 판정의 크기 비율. 1보다 작으면 차체 안에 묻혀 판정이 나지 않으므로 1 미만은 1로 취급한다")]
+    [SerializeField] private float killZoneScale = 1f;
+    [Tooltip("자동으로 만들 때, 차체 표면 바깥으로 치임 판정을 얼마나 내밀지(m)")]
+    [SerializeField] private float killZonePadding = 0.2f;
 
     [Header("사운드")]
     [Tooltip("출발할 때 한 번 울릴 소리")]
@@ -130,10 +132,22 @@ public class ChargingCar : MonoBehaviour
         BoxCollider box = zoneObject.AddComponent<BoxCollider>();
         box.isTrigger = true;
         box.center = localCenter;
-        box.size = new Vector3(
+
+        Vector3 localSize = new Vector3(
             Mathf.Abs(localExtents.x) * 2f,
             Mathf.Abs(localExtents.y) * 2f,
-            Mathf.Abs(localExtents.z) * 2f) * Mathf.Max(0.1f, killZoneScale);
+            Mathf.Abs(localExtents.z) * 2f);
+
+        // 차체 콜라이더는 솔리드라 플레이어가 차체 안쪽까지 파고들지 못한다.
+        // 치임 판정을 차체보다 작게 잡으면(예전 기본값 0.9) 트리거에 닿을 일이 없어 치여도 죽지 않는다.
+        // 차체 표면을 살짝 넘어서도록 키워서, 부딪히는 순간 판정이 나게 한다.
+        // 차체 스케일이 1이 아닐 수 있으므로 여유분은 월드 기준으로 재서 로컬로 환산한다.
+        Vector3 localPadding = transform.InverseTransformVector(Vector3.one * Mathf.Max(0f, killZonePadding));
+
+        box.size = localSize * Mathf.Max(1f, killZoneScale) + new Vector3(
+            Mathf.Abs(localPadding.x),
+            Mathf.Abs(localPadding.y),
+            Mathf.Abs(localPadding.z));
 
         killZone = zoneObject.AddComponent<CarKillZone>();
         killZone.Setup(this, deathAnimationTriggerName);
