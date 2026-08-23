@@ -4,6 +4,13 @@ using UnityEngine;
 // 아직 Sprite가 없는 원소는 타입별 색깔 원으로 대신 표시한다.
 public static class ElementVisual
 {
+    // 탑뷰에서 바닥에 겹쳐 눕는 납작한 표시들의 그리는 순서.
+    //
+    // 함정 표시와 그 위에 올려 둔 원소는 둘 다 바닥에 붙어 있어서 높이로는 앞뒤를 가릴 수 없다.
+    // 정렬 순서를 확실히 갈라 두어야 함정 위에 원소를 놓았을 때 언제나 원소가 위로 올라온다.
+    public const int TrapIconSortingOrder = 0;
+    public const int PlacedIconSortingOrder = 100;
+
     private static Sprite circleSprite;
     private static Sprite ringSprite;
 
@@ -157,6 +164,36 @@ public static class ElementVisual
         return iconObject.transform;
     }
 
+    // 바닥에 눕혀 놓는 그림 하나를 만든다(함정의 탑뷰 표시처럼 원소와 상관없는 표시용).
+    //
+    // size는 미터로 재는 가로·세로다. 가로세로를 다르게 주면 길게 누운 함정 자리도 그대로 표현할 수 있다.
+    // sortingOrder로 겹치는 순서를 정한다 — 배치한 원소가 늘 위에 오도록 함정 쪽을 낮게 준다.
+    public static SpriteRenderer CreateFlatSprite(
+        string name, Transform parent, Sprite sprite, Color color, Vector2 size, int sortingOrder)
+    {
+        GameObject flat = new GameObject(name, typeof(SpriteRenderer));
+        flat.transform.SetParent(parent, false);
+
+        SpriteRenderer renderer = flat.GetComponent<SpriteRenderer>();
+        renderer.sprite = sprite;
+        renderer.color = color;
+        renderer.sortingOrder = sortingOrder;
+
+        Material material = IconMaterial;
+        if (material != null)
+        {
+            renderer.sharedMaterial = material;
+        }
+
+        Vector2 native = sprite.bounds.size;
+        flat.transform.localScale = new Vector3(
+            native.x > 0f ? size.x / native.x : 1f,
+            native.y > 0f ? size.y / native.y : 1f,
+            1f);
+
+        return renderer;
+    }
+
     // 이미 만들어 둔 아이콘의 원소/크기를 다시 지정한다(장애물처럼 같은 아이콘을 재사용할 때).
     public static void ApplyIconVisual(SpriteRenderer renderer, ElementData data, float diameter)
     {
@@ -172,6 +209,10 @@ public static class ElementVisual
         Sprite sprite = data.Icon != null ? data.Icon : Circle;
         renderer.sprite = sprite;
         renderer.color = data.Icon != null ? Color.white : GetColor(data);
+
+        // 함정 표시(TrapIconSortingOrder)보다 뒤에 그려야 함정 위에 올려 둔 원소가 가려지지 않는다.
+        // 둘 다 바닥에 납작하게 붙어 있어서 높이 차이로는 앞뒤가 정해지지 않는다.
+        renderer.sortingOrder = PlacedIconSortingOrder;
 
         float nativeSize = Mathf.Max(sprite.bounds.size.x, sprite.bounds.size.y);
         float scale = nativeSize > 0f ? diameter / nativeSize : 1f;

@@ -208,6 +208,9 @@ public class WaterTrap : MonoBehaviour, IElementCounterTrap
         ? effectRoot
         : (trapCollider != null ? trapCollider.transform : transform);
 
+    // 탑뷰에서 3D 모습을 감출 때(TrapTopViewIcon) 기준으로 삼는 뿌리. 물 함정은 연출 뿌리가 곧 물 모델이다.
+    public Transform VisualRoot => EffectRoot;
+
     private void OnEnable()
     {
         PlayerAutoWalker.BeforeRespawn += HandleBeforeRespawn;

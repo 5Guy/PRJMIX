@@ -33,8 +33,12 @@ public class Sandstorm : MonoBehaviour
     [SerializeField] private Transform visualRoot;
 
     [Header("탑뷰 표시")]
-    [Tooltip("원소를 배치하는 탑뷰에서는 소용돌이를 숨기고 납작한 표식만 보여 준다")]
+    [Tooltip("원소를 배치하는 탑뷰에서는 소용돌이를 숨긴다")]
     [SerializeField] private bool hideVisualInTopView = true;
+    [Tooltip("소용돌이 한가운데에도 표식을 하나 그린다.\n" +
+             "보통은 바로 옆 상쇄 칸(SandstormCounterPad)이 이미 그 자리를 표시하고 있어서, " +
+             "켜면 표식이 두 개 겹쳐 보인다. 상쇄 칸이 따로 없는 모래바람에만 켠다")]
+    [SerializeField] private bool showTopViewMarker;
     [SerializeField] private Color topViewMarkerColor = new Color(0.85f, 0.72f, 0.42f, 0.9f);
     [Tooltip("탑뷰 표식의 지름(미터)")]
     [SerializeField] private float topViewMarkerDiameter = 1.2f;
@@ -66,8 +70,6 @@ public class Sandstorm : MonoBehaviour
     [SerializeField] private float windVolume = 0.7f;
 
     private AudioSource windSource;
-    private Renderer[] visualRenderers;
-    private Transform topViewMarker;
     private Vector3 startPosition;
     private Quaternion startRotation;
     private bool wasActiveAtStart = true;
@@ -255,13 +257,15 @@ public class Sandstorm : MonoBehaviour
         windSource.spatialBlend = 1f;
     }
 
-    // 탑뷰에서 숨길 대상(= 소용돌이 연출)을 미리 모아 두고, 대신 보여 줄 납작한 표식을 만든다.
-    // 표식 자신은 숨김 대상에서 빠져야 하므로 렌더러를 먼저 모은다.
+    // 탑뷰에서는 소용돌이가 도로 전체를 가려 어느 칸에 원소를 놓는지 보이지 않는다.
+    // 연출을 숨기고 납작한 표식으로 대신하는 일은 함정 공통 부품(TrapTopViewIcon)이 맡는다.
+    // 여기서는 모래바람만 아는 색과 크기를 넘겨 준다.
+    //
+    // 표식은 기본적으로 그리지 않는다. 소용돌이를 끄는 자리는 옆에 놓인 상쇄 칸이고
+    // 그쪽이 이미 표시를 달고 있어서, 여기서 하나 더 그리면 두 개가 겹쳐 보인다.
     private void BuildTopViewMarker()
     {
-        visualRenderers = GetComponentsInChildren<Renderer>(true);
-
-        if (visualRenderers.Length == 0)
+        if (GetComponentsInChildren<Renderer>(true).Length == 0)
         {
             Debug.LogWarning($"{name}: 모래바람 연출(Renderer)이 하나도 없습니다. EzTornado 프리팹을 자식으로 넣어 주세요.", this);
         }
@@ -271,61 +275,18 @@ public class Sandstorm : MonoBehaviour
             return;
         }
 
-        GameObject markerObject = new GameObject("TopViewMarker", typeof(SpriteRenderer));
-        markerObject.transform.SetParent(transform, false);
-
-        // 표식 지름도 미터로 적어 둔 값이라, 부모 스케일에 휩쓸리지 않게 위치와 크기를 되돌린다.
-        Vector3 inverse = InverseLossyScale();
-        markerObject.transform.localPosition = Vector3.up * (0.03f * inverse.y);
-
-        // 바닥에 눕혀야 위에서 봤을 때 아이콘처럼 보인다.
-        markerObject.transform.localRotation = Quaternion.Euler(90f, 0f, 0f);
-
-        SpriteRenderer renderer = markerObject.GetComponent<SpriteRenderer>();
-        renderer.sprite = ElementVisual.Circle;
-        renderer.color = topViewMarkerColor;
-
-        float native = Mathf.Max(renderer.sprite.bounds.size.x, renderer.sprite.bounds.size.y);
-        float fit = native > 0f ? topViewMarkerDiameter / native : 1f;
-        markerObject.transform.localScale = Vector3.Scale(Vector3.one * fit, inverse);
-
-        topViewMarker = markerObject.transform;
-    }
-
-    private void OnEnable()
-    {
-        CameraViewController.TopViewChanged += ApplyViewMode;
-        ApplyViewMode(CameraViewController.IsTopView);
-    }
-
-    private void OnDisable()
-    {
-        CameraViewController.TopViewChanged -= ApplyViewMode;
-    }
-
-    // 탑뷰에서는 소용돌이가 도로 전체를 가려 어느 칸에 원소를 놓는지 보이지 않는다.
-    // 연출은 렌더러만 끄고(파티클은 그대로 돌게 두고) 납작한 표식으로 대신한다.
-    private void ApplyViewMode(bool topView)
-    {
-        if (!hideVisualInTopView)
+        // 씬에서 직접 붙이고 값을 맞춰 둔 것이 있으면 그대로 쓴다.
+        if (GetComponent<TrapTopViewIcon>() != null)
         {
             return;
         }
 
-        if (visualRenderers != null)
-        {
-            foreach (Renderer renderer in visualRenderers)
-            {
-                if (renderer != null)
-                {
-                    renderer.enabled = !topView;
-                }
-            }
-        }
+        TrapTopViewIcon marker = gameObject.AddComponent<TrapTopViewIcon>();
+        marker.Configure(transform, null, topViewMarkerColor, topViewMarkerDiameter);
 
-        if (topViewMarker != null)
+        if (!showTopViewMarker)
         {
-            topViewMarker.gameObject.SetActive(topView);
+            marker.HideWithoutMarker();
         }
     }
 

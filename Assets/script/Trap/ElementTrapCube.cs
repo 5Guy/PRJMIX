@@ -69,6 +69,12 @@ public class ElementTrapCube : MonoBehaviour, IElementCounterTrap
     public ElementData ElementData => elementData;
     public bool IsCountered => countered;
 
+    // 이 함정의 "보이는 모습" 전체를 담은 뿌리.
+    //
+    // 불꽃·연기는 보통 이 감지 오브젝트의 형제로 붙어 있어서, 자기 하위만 봐서는 함정의 모습을 다 찾지 못한다.
+    // 탑뷰에서 3D 모습을 감출 때(TrapTopViewIcon) 이 뿌리를 기준으로 삼는다.
+    public Transform VisualRoot => effectRoot != null ? effectRoot : transform;
+
     // 필요한 개수까지 다 올려 두어 발동을 기다리는 상태.
     // 진흙 2개짜리 함정에 하나만 올려 둔 동안은 아직 false다(플레이어가 지나가도 꺼지지 않는다).
     public bool IsArmed => armedElement != null && armedCount >= RequiredFor(armedElement) && !countered;
