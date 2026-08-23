@@ -437,7 +437,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 105623839560709206, guid: eef5e37e765c64e40bf0adce03d5eb47, type: 3}
       propertyPath: m_LocalPosition.z
-      value: -16.92
+      value: -24.39
       objectReference: {fileID: 0}
     - target: {fileID: 105623839560709206, guid: eef5e37e765c64e40bf0adce03d5eb47, type: 3}
       propertyPath: m_LocalRotation.w
@@ -520,15 +520,15 @@ PrefabInstance:
       value: 6
       objectReference: {fileID: 0}
     - target: {fileID: 1550714937034876352, guid: eef5e37e765c64e40bf0adce03d5eb47, type: 3}
-      propertyPath: counterElements.Array.data[3]
+      propertyPath: 'counterElements.Array.data[3]'
       value: 
       objectReference: {fileID: 11400000, guid: 7fe4bfa8e3c985244b165c1d0b5a080c, type: 2}
     - target: {fileID: 1550714937034876352, guid: eef5e37e765c64e40bf0adce03d5eb47, type: 3}
-      propertyPath: counterElements.Array.data[4]
+      propertyPath: 'counterElements.Array.data[4]'
       value: 
       objectReference: {fileID: 11400000, guid: 6ee29ce3b74900a4d93c7379ececdaf8, type: 2}
     - target: {fileID: 1550714937034876352, guid: eef5e37e765c64e40bf0adce03d5eb47, type: 3}
-      propertyPath: counterElements.Array.data[5]
+      propertyPath: 'counterElements.Array.data[5]'
       value: 
       objectReference: {fileID: 11400000, guid: 6b5bcd9b92614124c956c4a5fbf07035, type: 2}
     - target: {fileID: 3312607220935795712, guid: eef5e37e765c64e40bf0adce03d5eb47, type: 3}
@@ -1950,7 +1950,7 @@ MonoBehaviour:
   contentOffset: {x: 0, y: 0}
   iconSprite: {fileID: 0}
   iconSize: {x: 48, y: 52}
-  label: "시작버튼"
+  label: "\uC2DC\uC791\uBC84\uD2BC"
   font: {fileID: 11400000, guid: db3c403a46e7c76498bbb0b64d883a6b, type: 2}
   fontSize: 40
   holdPlayersUntilPressed: 1
@@ -3030,7 +3030,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 1148744875894692283, guid: 71bc5087266f00e4fac975185b636fc5, type: 3}
       propertyPath: m_LocalPosition.z
-      value: -37.86
+      value: -36.11
       objectReference: {fileID: 0}
     - target: {fileID: 1148744875894692283, guid: 71bc5087266f00e4fac975185b636fc5, type: 3}
       propertyPath: m_LocalRotation.w
@@ -3063,8 +3063,8 @@ PrefabInstance:
     - target: {fileID: 4781369073208118045, guid: 71bc5087266f00e4fac975185b636fc5, type: 3}
       propertyPath: m_WarningMessage
       value: "\nBinding warning: Some generic clip(s) animate transforms that are
-        already bound by a Humanoid avatar. These transforms can only be changed by
-        Humanoid clips.\n\tTransform 'mixamorig:Hips'\n\tTransform 'mixamorig:LeftFoot'\n\tTransform
+        already bound by a Humanoid avatar. These transforms can only be changed
+        by Humanoid clips.\n\tTransform 'mixamorig:Hips'\n\tTransform 'mixamorig:LeftFoot'\n\tTransform
         'mixamorig:LeftHandThumb2'\n\tTransform 'mixamorig:LeftHandIndex1'\n\tTransform
         'mixamorig:Spine1'\n\tTransform 'mixamorig:LeftToeBase'\n\tTransform 'mixamorig:LeftHandThumb3'\n\tTransform
         'mixamorig:RightArm'\n\tTransform 'mixamorig:LeftLeg'\n\tTransform 'mixamorig:LeftHandMiddle3'\n\tand
@@ -14123,7 +14123,7 @@ Transform:
   m_GameObject: {fileID: 1583876341320956508}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: -0.15, y: -0.000006914139, z: -13.68}
+  m_LocalPosition: {x: -0.15, y: -0.000006914139, z: -22.53}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
@@ -15168,7 +15168,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 694022042857099819, guid: 8dd1f07dfd8e0f443b30364d52b5fa7e, type: 3}
       propertyPath: m_LocalPosition.z
-      value: -24.17
+      value: -26.55
       objectReference: {fileID: 0}
     - target: {fileID: 694022042857099819, guid: 8dd1f07dfd8e0f443b30364d52b5fa7e, type: 3}
       propertyPath: m_LocalRotation.w
@@ -15207,11 +15207,11 @@ PrefabInstance:
       value: 5
       objectReference: {fileID: 0}
     - target: {fileID: 1575437487576032858, guid: 8dd1f07dfd8e0f443b30364d52b5fa7e, type: 3}
-      propertyPath: counterElements.Array.data[3]
+      propertyPath: 'counterElements.Array.data[3]'
       value: 
       objectReference: {fileID: 11400000, guid: 8f5e906c7b494c34db3fbbcdef7c4bb2, type: 2}
     - target: {fileID: 1575437487576032858, guid: 8dd1f07dfd8e0f443b30364d52b5fa7e, type: 3}
-      propertyPath: counterElements.Array.data[4]
+      propertyPath: 'counterElements.Array.data[4]'
       value: 
       objectReference: {fileID: 11400000, guid: 6ee29ce3b74900a4d93c7379ececdaf8, type: 2}
     - target: {fileID: 1575437487576032858, guid: 8dd1f07dfd8e0f443b30364d52b5fa7e, type: 3}
@@ -20195,7 +20195,7 @@ Transform:
   m_GameObject: {fileID: 1494174647062778616}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: -0, z: -0, w: 1}
-  m_LocalPosition: {x: -0, y: 0, z: 0}
+  m_LocalPosition: {x: -0, y: 0, z: -5.22}
   m_LocalScale: {x: 0.16840869, y: 0.16840869, z: 0.16840869}
   m_ConstrainProportionsScale: 0
   m_Children: []
