@@ -1,0 +1,21 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 9873d080ad1099c49900a189c7f9b15e, type: 3}
+  m_Name: Swamp
+  m_EditorClassIdentifier: 
+  elementName: "\uB2AA"
+  elementType: 10
+  isBaseElement: 0
+  score: 2
+  icon: {fileID: 21300000, guid: a137cdf54c477c143974308a8bd7c8aa, type: 3}
+  description: "\uB2AA\uC6D0\uC18C \uD759+\uBB3C\n"
+  worldModel: {fileID: 2712519173964293973, guid: ad7e57cfcb7f21049806d7f983a6ad1d, type: 3}

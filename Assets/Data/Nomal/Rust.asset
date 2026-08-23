@@ -1,0 +1,21 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 9873d080ad1099c49900a189c7f9b15e, type: 3}
+  m_Name: Rust
+  m_EditorClassIdentifier: 
+  elementName: "\uB179"
+  elementType: 12
+  isBaseElement: 0
+  score: 1
+  icon: {fileID: 21300000, guid: 143bbdabc67ded84f8444588f1cd45a7, type: 3}
+  description: "\uB179\uC6D0\uC18C \uCCA0+\uBB3C"
+  worldModel: {fileID: 8421430371853900008, guid: f7d7d8ba6d1f6cf47ba04ab13cfa96ff, type: 3}

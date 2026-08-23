@@ -1,0 +1,21 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 9873d080ad1099c49900a189c7f9b15e, type: 3}
+  m_Name: Mud
+  m_EditorClassIdentifier: 
+  elementName: "\uC9C4\uD759 "
+  elementType: 11
+  isBaseElement: 0
+  score: 1
+  icon: {fileID: 21300000, guid: d398348fc1621d1459b1019ad0a393ec, type: 3}
+  description: "\uC9C4\uD759\uC6D0 \uBB3C+\uD759"
+  worldModel: {fileID: 8531084678093774250, guid: e67bcaff1ecda02479337905010272ac, type: 3}
