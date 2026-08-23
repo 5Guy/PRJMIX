@@ -42,15 +42,17 @@ public class TargetArrowMarker : MonoBehaviour
     [SerializeField] private float spinSpeed = 0f;
 
     [Header("색")]
-    [Tooltip("켜면 대상을 보고 색을 고른다 (플레이어=노랑, 함정=빨강, 그 밖=하늘)")]
+    [Tooltip("켜면 대상을 보고 자동으로 색을 고른다 (플레이어=노랑, 함정=빨강, 그 밖=하늘). " +
+             "아래 색을 인스펙터에서 직접 정하려면 이 옵션을 꺼야 한다. 켜져 있으면 아래 색은 계속 자동 색으로 되돌아간다")]
     [SerializeField] private bool autoColor = true;
+    [Tooltip("이 화살표의 색. autoColor가 켜져 있는 동안은 여기서 바꿔도 곧바로 자동 색으로 덮어써진다")]
     [SerializeField] private Color color = new Color(1f, 0.82f, 0.15f);
     [Tooltip("자체발광 세기. 그늘에 들어가도 색이 죽지 않게 한다")]
     [Range(0f, 4f)]
     [SerializeField] private float emission = 1.2f;
 
     [Header("자동 숨김")]
-    [Tooltip("함정이 원소에 상쇄되어 꺼지면 화살표도 감춘다")]
+    [Tooltip("함정이나 모래폭풍이 원소에 상쇄되어 꺼지면 화살표도 감춘다")]
     [SerializeField] private bool hideWhenTrapCountered = true;
     [Tooltip("플레이어가 죽어 있는 동안 화살표를 감춘다")]
     [SerializeField] private bool hideWhenPlayerDead = true;
@@ -65,7 +67,9 @@ public class TargetArrowMarker : MonoBehaviour
 
     private MeshRenderer view;
     private Transform host;              // 표시 대상 = 부모
-    private ElementTrapCube trap;
+    // 불 함정(ElementTrapCube)뿐 아니라 물 함정(WaterTrap)까지 함께 보려면 구체 타입이 아니라 규약을 봐야 한다.
+    private IElementCounterTrap trap;
+    private Sandstorm sandstorm;         // 모래폭풍은 상쇄 칸을 자식으로 들고 있어 위로 훑어서는 못 찾는다
     private IPlayerKillable killable;
     private Vector3 anchorLocal;         // 대상의 정수리 (부모 로컬 좌표)
     private float inverseHostScaleY = 1f;
@@ -205,11 +209,17 @@ public class TargetArrowMarker : MonoBehaviour
         if (host == null)
         {
             trap = null;
+            sandstorm = null;
             killable = null;
             return;
         }
 
-        trap = host.GetComponentInParent<ElementTrapCube>();
+        trap = host.GetComponentInParent<IElementCounterTrap>();
+
+        // 모래폭풍은 상쇄 칸(ElementTrapCube)을 자식으로 들고 있어서 위로 훑는 것만으로는 못 찾는다.
+        // 여기서 같이 잡아 두지 않으면 폭풍이 상쇄되어 꺼져도 화살표만 허공에 남는다.
+        sandstorm = host.GetComponentInParent<Sandstorm>();
+
         killable = host.GetComponentInParent<IPlayerKillable>();
 
         if (autoColor)
@@ -226,7 +236,8 @@ public class TargetArrowMarker : MonoBehaviour
             return PlayerColor;
         }
 
-        return trap != null ? TrapColor : OtherColor;
+        // 모래폭풍도 파훼 대상인 함정이므로 불·물 함정과 같은 빨강으로 맞춘다.
+        return trap != null || sandstorm != null ? TrapColor : OtherColor;
     }
 
     // 대상과 그 자식 렌더러를 모두 감싸는 상자의 꼭대기 가운데 점.
@@ -276,6 +287,11 @@ public class TargetArrowMarker : MonoBehaviour
         bool show = true;
 
         if (hideWhenTrapCountered && trap != null && trap.IsCountered)
+        {
+            show = false;
+        }
+
+        if (hideWhenTrapCountered && sandstorm != null && sandstorm.IsCountered)
         {
             show = false;
         }

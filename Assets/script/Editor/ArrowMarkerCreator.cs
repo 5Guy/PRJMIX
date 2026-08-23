@@ -24,14 +24,22 @@ public static class ArrowMarkerCreator
     private const string PrefabFolder = "Assets/Prefab";
     private const string MaterialPath = MaterialFolder + "/ArrowMarker.mat";
     private const string MeshPath = MeshFolder + "/ArrowMarker_Down.asset";
-    private const string PrefabPath = PrefabFolder + "/ArrowMarker.prefab";
+    private const string PrefabPath = PrefabFolder + "/Object/ArrowMarker.prefab";
 
     // "한 번에 붙이기"가 손봐 줄 프리팹들.
+    //
+    // 반드시 "씬에서 실제로 쓰는" 프리팹을 적어야 한다.
+    // 예전에는 Assets/Prefab/Player.prefab 처럼 하위 폴더로 옮겨지기 전의 경로가 적혀 있어서,
+    // 이 메뉴를 눌러도 하나도 못 찾고 조용히 넘어갔다. 그래서 물·불·황소 위에 화살표가 없었다.
+    // (Object/FireTrap, Object/FireTrab 에는 화살표가 붙어 있지만 어느 씬에서도 쓰지 않는 사본이다)
     private static readonly string[] DefaultTargets =
     {
-        "Assets/Prefab/Player.prefab",
-        "Assets/Prefab/FireTrab.prefab",
-        "Assets/Prefab/FireTrap.prefab",
+        "Assets/Prefab/Object/Player.prefab",
+        "Assets/Prefab/real/FireTrab.prefab",        // Stage_01
+        "Assets/Prefab/real/FireTrab 1.prefab",      // Stage_02, Stage_03
+        "Assets/Prefab/real/WaterTrap 1.prefab",     // 전 스테이지
+        "Assets/Prefab/real/bullsOneShot 1.prefab",  // Stage_03
+        "Assets/Prefab/real/StormTrabSet 1.prefab",  // Stage_03
     };
 
     // 화살표 모양 치수. 끝(뾰족한 쪽)이 원점이고 몸통이 +Y로 뻗는다. 전체 높이는 1.
