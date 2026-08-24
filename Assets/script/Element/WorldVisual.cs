@@ -82,6 +82,34 @@ public static class WorldVisual
         return CreateMaterial(unlitShader, color);
     }
 
+    // 비쳐 보이는 Unlit 재질. 배치 칸 표시처럼 "지형 위에 옅게 덮는" 것에 쓴다.
+    //
+    // URP/Unlit도 기본은 불투명이라, 알파를 넣어도 그냥 진하게 칠해진다.
+    // CreateTransparentLit과 같은 방식으로 표면 종류를 직접 Transparent로 바꿔 줘야 한다.
+    public static Material CreateTransparentUnlit(Color color)
+    {
+        Material material = CreateUnlit(color);
+
+        // CreateUnlit이 셰이더를 못 찾아 Lit으로 대신 만들었다면 이미 반투명 처리가 되어 있다.
+        if (material.shader != unlitShader)
+        {
+            return material;
+        }
+
+        material.SetFloat("_Surface", 1f);     // 0 = Opaque, 1 = Transparent
+        material.SetFloat("_Blend", 0f);       // 0 = Alpha
+        material.SetFloat("_ZWrite", 0f);
+        material.SetFloat("_AlphaClip", 0f);
+        material.SetInt("_SrcBlend", (int)UnityEngine.Rendering.BlendMode.SrcAlpha);
+        material.SetInt("_DstBlend", (int)UnityEngine.Rendering.BlendMode.OneMinusSrcAlpha);
+        material.EnableKeyword("_SURFACE_TYPE_TRANSPARENT");
+        material.DisableKeyword("_ALPHATEST_ON");
+        material.SetOverrideTag("RenderType", "Transparent");
+        material.renderQueue = (int)UnityEngine.Rendering.RenderQueue.Transparent;
+
+        return material;
+    }
+
     private static Material CreateMaterial(Shader shader, Color color)
     {
         Material material = new Material(shader) { hideFlags = HideFlags.HideAndDontSave };

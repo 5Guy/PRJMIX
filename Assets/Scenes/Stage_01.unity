@@ -2162,6 +2162,11 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   ground: {fileID: 543450653378556208}
   groundObjectName: map1
+  road: {fileID: 0}
+  roadObjectName: Road_Lane_01
+  cellsAcrossRoad: 3
+  roadWidthOverride: 6.24
+  roadCenterOffset: 0
   cellSize: 1
   edgePadding: 0.5
   surfaceOffset: 0
@@ -14406,7 +14411,7 @@ Transform:
   m_GameObject: {fileID: 1583876341320956508}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: -0.15, y: -0.000006914139, z: -22.53}
+  m_LocalPosition: {x: -0.12515926, y: -0.000006914139, z: -11.150004}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
@@ -15462,7 +15467,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 694022042857099819, guid: 8dd1f07dfd8e0f443b30364d52b5fa7e, type: 3}
       propertyPath: m_LocalPosition.x
-      value: -2.77
+      value: -1.957221
       objectReference: {fileID: 0}
     - target: {fileID: 694022042857099819, guid: 8dd1f07dfd8e0f443b30364d52b5fa7e, type: 3}
       propertyPath: m_LocalPosition.y
@@ -15470,7 +15475,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 694022042857099819, guid: 8dd1f07dfd8e0f443b30364d52b5fa7e, type: 3}
       propertyPath: m_LocalPosition.z
-      value: -26.55
+      value: -26.83741
       objectReference: {fileID: 0}
     - target: {fileID: 694022042857099819, guid: 8dd1f07dfd8e0f443b30364d52b5fa7e, type: 3}
       propertyPath: m_LocalRotation.w

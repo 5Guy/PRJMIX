@@ -66,10 +66,17 @@ public static class Stage01TrapSetup
     // 함정 앞 접근 트리거(기본 3.5m)가 앞 함정에 걸치지 않도록 지키는 최소 간격.
     private const float MinimumGap = 4f;
 
+    // 함정 사이에 비워 둘 최소 칸 수.
+    //
+    // 칸 크기는 도로 폭 ÷ 칸 수라서 스테이지마다 다르다. 미터로 벌려 두면 칸에 맞추는 순간
+    // 다시 붙어 버리므로, 벌리는 것도 칸 단위로 해야 한다.
+    // 2칸이면 Stage_01 기준 6.3m라 접근 트리거(3.5m)가 겹치지 않는다.
+    private const int MinimumCellGap = 2;
+
     [MenuItem("Tools/Molra/Stage_01 에 함정 깔기")]
     public static void Build()
     {
-        if (!EditorSceneManager.SaveCurrentModifiedScenesIfUserWantsTo())
+        if (!Application.isBatchMode && !EditorSceneManager.SaveCurrentModifiedScenesIfUserWantsTo())
         {
             return;
         }
@@ -108,6 +115,11 @@ public static class Stage01TrapSetup
         int placed = 0;
         List<Vector3> used = new List<Vector3>();
 
+        // 진행 축(길이 Z로 뻗었으면 z)과 나아가는 쪽(+/-)을 미리 정해 둔다.
+        bool alongIsZ = Mathf.Abs(direction.z) >= Mathf.Abs(direction.x);
+        int alongSign = (alongIsZ ? direction.z : direction.x) >= 0f ? 1 : -1;
+        int lastAlongCell = int.MinValue;
+
         foreach (Placement entry in Layout)
         {
             GameObject prefab = LoadPrefab(entry.PrefabName);
@@ -123,6 +135,24 @@ public static class Stage01TrapSetup
             if (hasGrid)
             {
                 point = TrapPlacement.SnapToCellCenter(point, gridOrigin, cellSize);
+
+                // 칸에 맞추다 보면 6m쯤 떨어뜨려 놓으려던 함정도 바로 옆 칸으로 붙어 버린다.
+                // (칸 크기가 도로 폭 ÷ 3이라 3.16m다. 함정 앞 접근 트리거는 3.5m 앞에 서므로 겹친다)
+                // 그래서 앞 함정에서 최소 몇 칸은 떨어지도록 뒤로 밀어 준다.
+                int alongCell = AlongCellIndex(point, gridOrigin, cellSize, alongIsZ);
+
+                if (lastAlongCell != int.MinValue)
+                {
+                    int minimum = lastAlongCell + alongSign * MinimumCellGap;
+
+                    if ((minimum - alongCell) * alongSign > 0)
+                    {
+                        alongCell = minimum;
+                        point = WithAlongCell(point, alongCell, gridOrigin, cellSize, alongIsZ);
+                    }
+                }
+
+                lastAlongCell = alongCell;
             }
 
             GameObject instance = (GameObject)PrefabUtility.InstantiatePrefab(prefab, scene);
@@ -136,7 +166,7 @@ public static class Stage01TrapSetup
             TrapPlacement.SnapToGround(instance.transform, TrapPlacement.SampleGroundY(point, player.position.y));
 
             WarnIfCrowded(instance, used);
-            used.Add(instance.transform.position);
+            used.Add(TrapKillPoint(instance));
 
             placed++;
             Debug.Log($"[Stage_01 함정] {entry.PrefabName} → {instance.transform.position} (파훼: {entry.Counter})", instance);
@@ -162,9 +192,40 @@ public static class Stage01TrapSetup
         return Mathf.Max(1f, Vector3.Dot(goal.transform.position - player.position, direction));
     }
 
+    // 함정 프리팹이 한 폴더에만 있지 않다. (WaterTrap은 Assets/Prefab/real 에 있다)
+    // 이름이 같은 프리팹을 폴더 순서대로 찾는다.
+    private static readonly string[] PrefabFolders =
+    {
+        TrapPlacement.TrapFolder,
+        "Assets/Prefab/real",
+    };
+
     private static GameObject LoadPrefab(string prefabName)
     {
-        return AssetDatabase.LoadAssetAtPath<GameObject>($"{TrapPlacement.TrapFolder}/{prefabName}.prefab");
+        foreach (string folder in PrefabFolders)
+        {
+            GameObject prefab = AssetDatabase.LoadAssetAtPath<GameObject>($"{folder}/{prefabName}.prefab");
+            if (prefab != null)
+            {
+                return prefab;
+            }
+        }
+
+        return null;
+    }
+
+    // 배치 모드(-batchmode)에서는 대화상자를 띄울 수 없다. 그냥 넘기면 "취소"로 읽혀서
+    // 함정을 하나도 깔지 못하거나 예전 함정을 그대로 남긴 채 겹쳐 깔게 된다.
+    // 배치 모드에서는 대화상자에서 사람이 고를 법한 쪽(다시 깔기 / 꺼 두기)을 그대로 고른다.
+    private static bool Confirm(string title, string message, string ok, string cancel)
+    {
+        if (Application.isBatchMode)
+        {
+            Debug.Log($"[Stage_01 함정] (배치 모드) '{title}' → '{ok}'로 진행합니다.");
+            return true;
+        }
+
+        return EditorUtility.DisplayDialog(title, message, ok, cancel);
     }
 
     // 이미 한 번 깔아 두었으면 지우고 다시 깐다. 사용자가 거절하면 아무것도 하지 않는다.
@@ -179,7 +240,7 @@ public static class Stage01TrapSetup
                 continue;
             }
 
-            bool rebuild = EditorUtility.DisplayDialog(
+            bool rebuild = Confirm(
                 "함정 다시 깔기",
                 $"'{TrapRootName}' 아래에 이미 함정이 깔려 있습니다.\n지우고 다시 깔까요?",
                 "다시 깔기",
@@ -231,7 +292,7 @@ public static class Stage01TrapSetup
         }
 
         string names = string.Join(", ", stale.ConvertAll(item => item.name));
-        bool disable = EditorUtility.DisplayDialog(
+        bool disable = Confirm(
             "예전 함정 정리",
             $"씬에 이미 함정이 {stale.Count}개 있습니다.\n\n{names}\n\n" +
             "새로 깐 함정과 겹치지 않도록 이것들을 꺼 둘까요? (지우지 않고 비활성화만 합니다)",
@@ -253,13 +314,38 @@ public static class Stage01TrapSetup
         Debug.Log($"[Stage_01 함정] 예전 함정 {stale.Count}개를 껐습니다: {names}");
     }
 
+    // 진행 축에서 이 지점이 몇 번째 칸인지.
+    private static int AlongCellIndex(Vector3 point, Vector3 gridOrigin, float cellSize, bool alongIsZ)
+    {
+        float value = alongIsZ ? point.z : point.x;
+        float origin = alongIsZ ? gridOrigin.z : gridOrigin.x;
+        return Mathf.FloorToInt((value - origin) / cellSize);
+    }
+
+    // 진행 축만 지정한 칸의 한가운데로 바꾼다. 나머지 축은 그대로 둔다.
+    private static Vector3 WithAlongCell(Vector3 point, int cell, Vector3 gridOrigin, float cellSize, bool alongIsZ)
+    {
+        float center = (alongIsZ ? gridOrigin.z : gridOrigin.x) + (cell + 0.5f) * cellSize;
+
+        return alongIsZ
+            ? new Vector3(point.x, point.y, center)
+            : new Vector3(center, point.y, point.z);
+    }
+
+    // 함정끼리 너무 붙어 있으면 알린다.
+    //
+    // 거리는 뿌리가 아니라 "실제로 죽는 자리"(판정 콜라이더)로 재야 한다.
+    // FireTrab은 뿌리와 판정 큐브가 7.7m나 떨어져 있어서, 뿌리로 재면
+    // 6.3m 벌려 놓은 함정이 2m 붙어 있는 것으로 잘못 나온다.
     private static void WarnIfCrowded(GameObject instance, List<Vector3> used)
     {
+        Vector3 here = TrapKillPoint(instance);
+
         foreach (Vector3 other in used)
         {
             float gap = Vector3.Distance(
                 new Vector3(other.x, 0f, other.z),
-                new Vector3(instance.transform.position.x, 0f, instance.transform.position.z));
+                new Vector3(here.x, 0f, here.z));
 
             if (gap < MinimumGap)
             {
@@ -270,5 +356,14 @@ public static class Stage01TrapSetup
                 return;
             }
         }
+    }
+
+    // 함정이 실제로 판정을 하는 자리. 판정 콜라이더가 없으면(자동차) 뿌리를 쓴다.
+    private static Vector3 TrapKillPoint(GameObject instance)
+    {
+        Physics.SyncTransforms();
+
+        Collider anchor = TrapPlacement.ResolveAnchorCollider(instance);
+        return anchor != null ? anchor.bounds.center : instance.transform.position;
     }
 }

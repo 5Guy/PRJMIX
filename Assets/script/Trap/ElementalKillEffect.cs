@@ -30,7 +30,7 @@ public class ElementalKillEffect : MonoBehaviour
     [SerializeField] private bool showFailPanelAfterRespawn = true;
 
     // 리스폰이 어떤 이유로든 오지 않을 때 실패 패널을 영영 잃지 않도록 두는 한도(초).
-    private const float MaxRespawnWait = 10f;
+    private const float MaxRespawnWait = 3f;
 
     // 임시 오브젝트에서 돌고 있는 사본인지. 연출이 끝나면 스스로 치운다.
     private bool isRunner;
@@ -123,12 +123,34 @@ public class ElementalKillEffect : MonoBehaviour
 
         // 리스폰이 끝나 플레이어가 다시 살아난 뒤에 패널을 띄운다.
         // 패널이 뜨면 timeScale이 0으로 내려가므로 대기는 실시간으로 센다.
-        IPlayerKillable killable = player != null ? player.GetComponentInChildren<IPlayerKillable>() : null;
+        //
+        // IPlayerKillable은 인터페이스라 UnityEngine.Object의 == 오버로드가 걸리지 않는다.
+        // 즉 플레이어가 파괴돼도 killable은 계속 null이 아닌 것처럼 보이고, 마지막으로 남은
+        // isDead(true)를 그대로 돌려주기 때문에 여기서 MaxRespawnWait만큼 통째로 갇힌다.
+        // 그래서 캐시해 두지 않고 매 프레임 player에서 다시 찾는다(파괴되면 곧바로 빠져나온다).
         float waited = 0f;
-        while (killable != null && killable.IsDead && waited < MaxRespawnWait)
+        while (waited < MaxRespawnWait)
         {
+            if (player == null)
+            {
+                break;
+            }
+
+            IPlayerKillable killable = player.GetComponentInChildren<IPlayerKillable>();
+            if (killable == null || !killable.IsDead)
+            {
+                break;
+            }
+
             waited += Time.unscaledDeltaTime;
             yield return null;
+        }
+
+        if (waited >= MaxRespawnWait)
+        {
+            Debug.LogWarning(
+                $"플레이어가 {MaxRespawnWait}초 안에 리스폰되지 않아 기다리지 않고 실패 패널을 띄웁니다. " +
+                "PlayerAutoWalker의 slowDownDuration + respawnDelay 값을 확인하세요.");
         }
 
         StageFailPanel.ShowAnyPanel();

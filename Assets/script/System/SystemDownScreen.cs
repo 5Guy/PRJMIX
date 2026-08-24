@@ -19,6 +19,7 @@ public class SystemDownScreen : MonoBehaviour
     private static SystemDownScreen instance;
 
     private CanvasGroup group;
+    private RectTransform canvasRect;
     private Image overlay;
     private Image scanline;
     private Image leftCurtain;
@@ -278,7 +279,18 @@ public class SystemDownScreen : MonoBehaviour
 
     private void SetCurtainProgress(float progress)
     {
-        float width = 960f * Mathf.Clamp01(progress);
+        // 커튼 한 장의 폭은 화면 절반이다.
+        //
+        // 참조 해상도(1920)의 절반인 960을 그대로 박아 두면 화면이 16:9일 때만 맞는다.
+        // CanvasScaler가 ScaleWithScreenSize + match 0.5라서, 비율이 다른 화면에서는
+        // 캔버스 좌표계의 폭이 1920이 아니게 되고(예: 905x377 창에서는 약 2232),
+        // 커튼이 960까지만 자라 가운데에 틈이 남은 채로 멈춘다.
+        // 그래서 그때그때 캔버스의 실제 폭을 재서 그 절반을 쓴다.
+        float halfWidth = canvasRect != null ? canvasRect.rect.width * 0.5f : 960f;
+
+        // 반올림 때문에 다 닫힌 뒤에도 가운데에 1px 실선이 남는 일이 없도록 올림한다.
+        // 두 장 다 검은색이라 조금 겹쳐도 보이는 결과는 같다.
+        float width = Mathf.Ceil(halfWidth * Mathf.Clamp01(progress));
         leftCurtainRect.sizeDelta = new Vector2(width, 0f);
         rightCurtainRect.sizeDelta = new Vector2(width, 0f);
     }
@@ -311,6 +323,8 @@ public class SystemDownScreen : MonoBehaviour
         scaler.referenceResolution = new Vector2(1920f, 1080f);
         scaler.screenMatchMode = CanvasScaler.ScreenMatchMode.MatchWidthOrHeight;
         scaler.matchWidthOrHeight = 0.5f;
+
+        canvasRect = canvasObject.GetComponent<RectTransform>();
 
         group = canvasObject.GetComponent<CanvasGroup>();
         group.alpha = 1f;

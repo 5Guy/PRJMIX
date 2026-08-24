@@ -84,6 +84,29 @@ public class PlacementSystem : MonoBehaviour
     [Tooltip("이 종류의 원소가 그렇게 동작한다")]
     [SerializeField] private ElementType lavaElement = ElementType.Lava;
 
+    [Header("놓을 자리 표시")]
+    [Tooltip("놓으려는 칸을 지금 든 원소의 색으로 물들인다. 끄면 아래 기본 색만 쓴다")]
+    [SerializeField] private bool tintHighlightWithElement = true;
+    [Tooltip("얼마나 옅게 할지. 0이면 색을 그대로 쓰고, 1에 가까울수록 흰색에 가까워진다")]
+    [Range(0f, 1f)]
+    [SerializeField] private float highlightPaleness = 0.15f;
+    [Tooltip("칸 안쪽 색의 진하기. 바닥이 살짝 비칠 정도만 남긴다")]
+    [Range(0.05f, 1f)]
+    [SerializeField] private float highlightAlpha = 0.6f;
+    [Tooltip("칸 테두리의 진하기. 안쪽보다 진해야 칸 경계가 또렷하게 보인다")]
+    [Range(0.05f, 1f)]
+    [SerializeField] private float highlightBorderAlpha = 1f;
+    [Tooltip("칸 테두리의 두께. 칸 크기에 대한 비율이다")]
+    [Range(0.02f, 0.3f)]
+    [SerializeField] private float highlightBorderThickness = 0.1f;
+
+    [Header("지형 높이")]
+    [Tooltip("놓을 자리의 지형 높이를 잴 때, 격자 평면에서 이만큼 위에서 아래로 광선을 쏜다(m).\n" +
+             "건물 옥상처럼 높은 곳에도 놓으려면 그 높이보다 커야 한다")]
+    [SerializeField] private float surfaceProbeUp = 60f;
+    [Tooltip("격자 평면보다 아래로 이만큼까지 지형을 찾는다(m)")]
+    [SerializeField] private float surfaceProbeDown = 20f;
+
     [Header("아이콘 크기")]
     [Tooltip("맵에 놓인 원소 아이콘의 지름을 칸 크기에 대한 비율로 정한다 (모든 원소 공통). 1에 가까울수록 칸을 꽉 채운다")]
     [Range(0.1f, 1f)]
@@ -95,10 +118,10 @@ public class PlacementSystem : MonoBehaviour
     private Vector2Int hoverCell;
     private bool hoverValid;
 
-    // 매 프레임 새 재질을 만들지 않도록 두 개만 만들어 돌려 쓴다.
-    private Material validMaterial;
-    private Material hoverMaterial;
-    private Material counterMaterial;
+    // 놓을 자리 표시에 쓰는 재질. 색만 매 프레임 바꿔 쓴다.
+    // 테두리와 안쪽을 따로 두어야 "어느 칸인지"가 또렷하게 보인다.
+    private Material highlightFillMaterial;
+    private Material highlightBorderMaterial;
 
     private CraftingPanelUI craftingPanel;
 
@@ -332,25 +355,19 @@ public class PlacementSystem : MonoBehaviour
 
             if (hoverValid)
             {
-                highlight.transform.position = grid.CellToWorld(hoverCell) + Vector3.up * 0.06f;
+                highlight.transform.position = CellSurface(hoverCell) + Vector3.up * 0.06f;
 
                 // 여기에 놓으면 무슨 일이 일어나는지 색으로 미리 알려 준다.
-                Renderer highlightRenderer = highlight.GetComponent<Renderer>();
+                Color tint = ResolveHighlightColor(current, hoverCell);
 
-                if (FindCounterableTrapAt(hoverCell, current) != null)
-                {
-                    // 이 칸의 함정을 끌 수 있다.
-                    highlightRenderer.sharedMaterial = CounterMaterial;
-                }
-                else if (Obstacle.FindAt(hoverCell) != null)
-                {
-                    // 장애물이 있는 칸이면 속성이 붙는다.
-                    highlightRenderer.sharedMaterial = HoverMaterial;
-                }
-                else
-                {
-                    highlightRenderer.sharedMaterial = ValidMaterial;
-                }
+                Color fill = tint;
+                fill.a = highlightAlpha;
+                WorldVisual.SetMaterialColor(HighlightFillMaterial, fill);
+
+                // 테두리는 옅게 만들지 않고 원래 색 그대로 진하게 둘러 준다.
+                Color border = tint;
+                border.a = highlightBorderAlpha;
+                WorldVisual.SetMaterialColor(HighlightBorderMaterial, border);
             }
         }
     }
@@ -384,7 +401,7 @@ public class PlacementSystem : MonoBehaviour
             // 갈래 안에 두면 그 칸이 무엇이냐에 따라 파도가 오기도 하고 안 오기도 한다.
             if (data.ElementType == tsunamiElement)
             {
-                SurgeTsunamiAt(grid.CellToWorld(hoverCell), data);
+                SurgeTsunamiAt(CellSurface(hoverCell), data);
             }
 
             IElementCounterTrap trap = FindCounterableTrapAt(hoverCell, data);
@@ -430,7 +447,7 @@ public class PlacementSystem : MonoBehaviour
                 // 갈 곳 없는 흰 폭풍이 그 자리에 서서, 출발하면 플레이어를 쫓아온다.
                 if (spawnRogueWind && data.ElementType == rogueWindElement)
                 {
-                    RogueWindStorm storm = RogueWindStorm.Attach(placedObject, grid.CellToWorld(hoverCell), rogueWindColorSource);
+                    RogueWindStorm storm = RogueWindStorm.Attach(placedObject, CellSurface(hoverCell), rogueWindColorSource);
 
                     // 흰 폭풍 자체가 곧 그 원소의 모습이다. 기본 구 대신 이것을 쓴다.
                     if (storm.Visual != null)
@@ -452,7 +469,7 @@ public class PlacementSystem : MonoBehaviour
                 // 용암을 물 함정이 아닌 맨땅에 부었다. 사방으로 흘러 퍼지고 밟으면 타 죽는다.
                 if (spillLava && data.ElementType == lavaElement)
                 {
-                    LavaSpill spill = LavaSpill.Attach(placedObject, grid.CellToWorld(hoverCell));
+                    LavaSpill spill = LavaSpill.Attach(placedObject, CellSurface(hoverCell));
 
                     // 용암 웅덩이 자체가 곧 그 원소의 모습이다. 기본 구 대신 이것을 쓴다.
                     placedObject.GetComponent<PlacedElementView>().ReplaceRound(spill.Visual);
@@ -488,43 +505,70 @@ public class PlacementSystem : MonoBehaviour
         }
     }
 
-    private Material ValidMaterial
+    private Material HighlightFillMaterial
     {
         get
         {
-            if (validMaterial == null)
+            if (highlightFillMaterial == null)
             {
-                validMaterial = WorldVisual.CreateUnlit(validColor);
+                highlightFillMaterial = CreateHighlightMaterial(highlightAlpha);
             }
 
-            return validMaterial;
+            return highlightFillMaterial;
         }
     }
 
-    private Material HoverMaterial
+    private Material HighlightBorderMaterial
     {
         get
         {
-            if (hoverMaterial == null)
+            if (highlightBorderMaterial == null)
             {
-                hoverMaterial = WorldVisual.CreateUnlit(hoverColor);
+                highlightBorderMaterial = CreateHighlightMaterial(highlightBorderAlpha);
             }
 
-            return hoverMaterial;
+            return highlightBorderMaterial;
         }
     }
 
-    private Material CounterMaterial
+    // 바닥이 살짝 비쳐야 "저 칸 위에 놓인다"가 읽힌다. 완전히 불투명하면 바닥을 가려 버린다.
+    //
+    // 만들 때부터 알파를 넣어 둬야 한다. Unlit 셰이더가 빌드에서 빠졌을 때
+    // WorldVisual이 Lit으로 대신 만들어 주는데, 그 갈림길이 알파를 보고 갈리기 때문이다.
+    private Material CreateHighlightMaterial(float alpha)
     {
-        get
-        {
-            if (counterMaterial == null)
-            {
-                counterMaterial = WorldVisual.CreateUnlit(counterColor);
-            }
+        Color start = validColor;
+        start.a = alpha;
 
-            return counterMaterial;
+        return WorldVisual.CreateTransparentUnlit(start);
+    }
+
+    // 놓으려는 칸을 무슨 색으로 물들일지.
+    //
+    // 색이 두 가지를 한꺼번에 알려 준다.
+    //   무엇을 놓는가 : 지금 든 원소의 색을 섞는다.
+    //   놓으면 어떻게 되는가 : 함정을 끌 수 있는 칸 / 장애물에 속성이 붙는 칸 / 그냥 놓는 칸.
+    // 마지막에 흰색 쪽으로 당겨 옅게 만든다. 바닥이 비쳐 보여야 어느 칸인지 알아볼 수 있다.
+    private Color ResolveHighlightColor(ElementData data, Vector2Int cell)
+    {
+        Color state = validColor;
+
+        if (FindCounterableTrapAt(cell, data) != null)
+        {
+            // 이 칸의 함정을 끌 수 있다.
+            state = counterColor;
         }
+        else if (Obstacle.FindAt(cell) != null)
+        {
+            // 장애물이 있는 칸이면 속성이 붙는다.
+            state = hoverColor;
+        }
+
+        Color tint = tintHighlightWithElement && data != null
+            ? Color.Lerp(state, ElementVisual.GetColor(data), 0.5f)
+            : state;
+
+        return Color.Lerp(tint, Color.white, highlightPaleness);
     }
 
     // 이 칸 위에 있고, 지금 들고 있는 원소로 끌 수 있는 함정을 찾는다.
@@ -544,7 +588,7 @@ public class PlacementSystem : MonoBehaviour
         float size = grid.CellSize;
         float height = Mathf.Max(0.2f, trapSearchHeight) + below;
         float half = height * 0.5f;
-        Vector3 center = grid.CellToWorld(cell) + Vector3.up * (half - below);
+        Vector3 center = CellSurface(cell) + Vector3.up * (half - below);
 
         // 함정 콜라이더는 트리거라서 트리거까지 포함해 훑어야 한다.
         Collider[] hits = Physics.OverlapBox(
@@ -605,7 +649,7 @@ public class PlacementSystem : MonoBehaviour
 
         // 개수를 채워 넣는 함정(진흙 2개처럼)은 같은 칸에 표시가 겹친다.
         // 그대로 두면 하나만 놓인 것처럼 보이므로, 두 번째부터는 조금씩 어긋나게 놓는다.
-        Vector3 spot = grid.CellToWorld(cell);
+        Vector3 spot = CellSurface(cell);
         int stacked = PlacedElement.FindAllAt(cell).Count;
 
         if (stacked > 0)
@@ -672,14 +716,26 @@ public class PlacementSystem : MonoBehaviour
     {
         float size = grid.CellSize;
 
+        // 테두리(바깥) 위에 안쪽 판을 살짝 띄워 얹는다.
+        // 한 겹짜리 반투명 판만으로는 바닥과 섞여서 칸 경계가 잘 안 보인다.
         highlight = WorldVisual.CreateBox(
             "Highlight",
             transform,
             Vector3.zero,
-            new Vector3(size * 0.92f, 0.06f, size * 0.92f),
-            ValidMaterial);
+            new Vector3(size, 0.06f, size),
+            HighlightBorderMaterial);
+
+        float inner = Mathf.Clamp01(1f - highlightBorderThickness * 2f);
+
+        GameObject fill = WorldVisual.CreateBox(
+            "HighlightFill",
+            highlight.transform,
+            new Vector3(0f, 0.4f, 0f),
+            new Vector3(inner, 1f, inner),
+            HighlightFillMaterial);
 
         Destroy(highlight.GetComponent<Collider>());
+        Destroy(fill.GetComponent<Collider>());
         highlight.SetActive(false);
     }
 
@@ -787,7 +843,7 @@ public class PlacementSystem : MonoBehaviour
         placed.transform.SetParent(transform, true);
 
         // 탑뷰(2D)/사선뷰(3D)에 따른 모습 전환은 PlacedElementView가 맡는다.
-        placed.GetComponent<PlacedElementView>().Init(data, grid.CellSize, grid.CellToWorld(cell), diameterRatioOverride: placedIconDiameterRatio);
+        placed.GetComponent<PlacedElementView>().Init(data, grid.CellSize, CellSurface(cell), diameterRatioOverride: placedIconDiameterRatio);
 
         PlacedElement.Attach(placed, data, PlacedElement.Kind.Element).WithCell(cell);
         return placed;
@@ -797,7 +853,7 @@ public class PlacementSystem : MonoBehaviour
     private void CreateStoneWall(Vector2Int cell)
     {
         float size = grid.CellSize;
-        Vector3 groundPosition = grid.CellToWorld(cell);
+        Vector3 groundPosition = CellSurface(cell);
 
         GameObject root = new GameObject($"StoneWall_{cell.x}_{cell.y}", typeof(PlacedElementView));
         root.transform.SetParent(transform, true);
@@ -845,7 +901,7 @@ public class PlacementSystem : MonoBehaviour
     private void CreateCarCounter(ElementData data, Vector2Int cell)
     {
         float size = grid.CellSize;
-        Vector3 groundPosition = grid.CellToWorld(cell);
+        Vector3 groundPosition = CellSurface(cell);
 
         GameObject root = new GameObject($"Placed_{data.ElementName}_{cell.x}_{cell.y}", typeof(PlacedElementView));
         root.transform.SetParent(transform, true);
@@ -869,12 +925,110 @@ public class PlacementSystem : MonoBehaviour
         }
 
         Ray ray = worldCamera.ScreenPointToRay(screenPosition);
-        if (!grid.Surface.Raycast(ray, out float distance))
+
+        // 먼저 실제 지형에 광선을 쏜다. 건물 옥상을 가리키고 있으면 옥상 지점이 나온다.
+        // 지형에 맞지 않으면(하늘을 가리키는 등) 예전처럼 격자 평면으로 떨어뜨린다.
+        Vector3 point;
+
+        if (TryRaycastTerrain(ray, out RaycastHit hit))
+        {
+            point = hit.point;
+        }
+        else if (grid.Surface.Raycast(ray, out float distance))
+        {
+            point = ray.GetPoint(distance);
+        }
+        else
         {
             return false;
         }
 
-        cell = grid.WorldToCell(ray.GetPoint(distance));
+        cell = grid.WorldToCell(point);
         return grid.Contains(cell);
+    }
+
+    // ───────────────────────────── 지형 높이 ─────────────────────────────
+
+    // 칸 한가운데의 "땅 위" 지점.
+    //
+    // 예전에는 격자 평면(맵 오브젝트의 y) 높이를 그대로 썼다. 그래서 도로보다 높은 곳
+    // (인도 턱, 건물 옥상, 언덕)에 놓으면 놓은 것이 지형에 파묻혀 보이지 않았다.
+    // 이제는 그 칸의 지형 제일 윗면을 찾아서 그 위에 놓는다.
+    private Vector3 CellSurface(Vector2Int cell)
+    {
+        Vector3 center = grid.CellToWorld(cell);
+        center.y = SampleSurfaceY(center);
+        return center;
+    }
+
+    // 그 지점 지형의 제일 윗면 높이. 찾지 못하면 격자 평면 높이를 쓴다.
+    private float SampleSurfaceY(Vector3 point)
+    {
+        float top = grid.SurfaceY + surfaceProbeUp;
+        Vector3 origin = new Vector3(point.x, top, point.z);
+        float distance = surfaceProbeUp + surfaceProbeDown;
+
+        // 함정은 트리거라서 QueryTriggerInteraction.Ignore로 자동으로 빠진다.
+        RaycastHit[] hits = Physics.RaycastAll(origin, Vector3.down, distance, ~0, QueryTriggerInteraction.Ignore);
+
+        float best = 0f;
+        bool found = false;
+
+        foreach (RaycastHit hit in hits)
+        {
+            if (!IsTerrain(hit.collider))
+            {
+                continue;
+            }
+
+            if (!found || hit.point.y > best)
+            {
+                best = hit.point.y;
+                found = true;
+            }
+        }
+
+        return found ? best : grid.SurfaceY;
+    }
+
+    // 마우스가 가리키는 지형. 놓아 둔 원소와 함정 트리거는 건너뛴다.
+    private static bool TryRaycastTerrain(Ray ray, out RaycastHit result)
+    {
+        result = default;
+
+        RaycastHit[] hits = Physics.RaycastAll(ray, 1000f, ~0, QueryTriggerInteraction.Ignore);
+        System.Array.Sort(hits, (a, b) => a.distance.CompareTo(b.distance));
+
+        foreach (RaycastHit hit in hits)
+        {
+            if (!IsTerrain(hit.collider))
+            {
+                continue;
+            }
+
+            result = hit;
+            return true;
+        }
+
+        return false;
+    }
+
+    // 지형으로 볼 수 있는 콜라이더인지.
+    //
+    // 걸어다니는 플레이어를 지형으로 세면 플레이어가 서 있는 칸에 놓을 때
+    // 원소가 플레이어 머리 위(1.2m)에 얹힌다. 놓아 둔 원소도 마찬가지로 위에 쌓인다.
+    private static bool IsTerrain(Collider collider)
+    {
+        if (collider == null)
+        {
+            return false;
+        }
+
+        if (PlayerLocator.FindPlayerRoot(collider.transform) != null)
+        {
+            return false;
+        }
+
+        return collider.GetComponentInParent<PlacedElement>() == null;
     }
 }

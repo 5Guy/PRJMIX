@@ -110,6 +110,7 @@ public class StageFailPanel : MonoBehaviour
 
         GameObject spawned = Instantiate(prefab);
         spawned.name = prefab.name;
+        spawned.SetActive(true);
 
         StageFailPanel panel = spawned.GetComponentInChildren<StageFailPanel>(true);
         if (panel == null)
@@ -148,7 +149,7 @@ public class StageFailPanel : MonoBehaviour
         GameObject target = GetPanelObject();
         if (target != null)
         {
-            target.SetActive(true);
+            ActivateWithParents(target);
         }
         else
         {
@@ -174,6 +175,22 @@ public class StageFailPanel : MonoBehaviour
         }
     }
 
+    // 패널 오브젝트만 켜서는 부족하다.
+    // failPanel이 자식으로 물려 있고 그 위 어딘가(Canvas, 그룹 오브젝트)가 꺼져 있으면
+    // SetActive(true)를 해도 화면에는 아무것도 나오지 않는다.
+    // 그러면 IsOpen만 true가 되고 timeScale은 0으로 내려가서, 패널 없이 게임만 멈춘 것처럼 보인다.
+    // 그래서 대상부터 맨 위 조상까지 올라가며 꺼져 있는 것을 전부 켠다.
+    private static void ActivateWithParents(GameObject target)
+    {
+        for (Transform current = target.transform; current != null; current = current.parent)
+        {
+            if (!current.gameObject.activeSelf)
+            {
+                current.gameObject.SetActive(true);
+            }
+        }
+    }
+
     // 조합창(100)이나 검은 화면 연출(200)에 가리지 않게 맨 위로 올린다.
     // 실패 패널은 판이 끝났다는 창이므로 무엇보다 위에 있어야 한다.
     private void BringCanvasToFront()
@@ -191,6 +208,9 @@ public class StageFailPanel : MonoBehaviour
 
         // 화면 순서를 정하는 것은 맨 위 캔버스다.
         canvas = canvas.rootCanvas != null ? canvas.rootCanvas : canvas;
+
+        // 캔버스 자체가 꺼져 있으면 아무리 자식을 켜도 화면에 나오지 않는다.
+        canvas.enabled = true;
 
         if (canvas.sortingOrder < FrontSortingOrder)
         {

@@ -84,12 +84,20 @@ public static class TrapPlacement
     // 판정 콜라이더가 목표 지점의 x/z 위에 오도록 뿌리를 옮긴다. 높이는 건드리지 않는다.
     public static void AlignHorizontally(Transform root, Vector3 target)
     {
+        // Collider.bounds는 물리 쪽이 들고 있는 값이라, 방금 트랜스폼을 옮겼어도 바로 따라오지 않는다.
+        // 동기화하지 않고 읽으면 "옮기기 전" 위치로 어긋난 정도를 계산해서
+        // 함정이 목표한 칸이 아니라 엉뚱한 칸에 가서 선다. (실제로 1m 가까이 어긋났다)
+        Physics.SyncTransforms();
+
         Collider anchor = ResolveAnchorCollider(root.gameObject);
         Vector3 offset = anchor != null
             ? anchor.bounds.center - root.position
             : Vector3.zero;
 
         root.position = new Vector3(target.x - offset.x, root.position.y, target.z - offset.z);
+
+        // 다음에 bounds를 읽는 쪽(높이 맞춤·검사)도 방금 옮긴 위치를 보게 한다.
+        Physics.SyncTransforms();
     }
 
     // 오브젝트의 바닥이 groundY + lift 에 닿도록 내린다.
@@ -99,6 +107,9 @@ public static class TrapPlacement
     // 둘 다 없을 때만 뿌리를 그 높이에 둔다.
     public static void SnapToGround(Transform target, float groundY, float lift = 0f)
     {
+        // 판정 콜라이더로 바닥을 잴 수도 있으므로 물리 쪽 위치를 먼저 맞춰 둔다.
+        Physics.SyncTransforms();
+
         Vector3 position = target.position;
 
         if (TryMeasureVisualBounds(target.gameObject, out Bounds bounds))
@@ -147,7 +158,8 @@ public static class TrapPlacement
     // ───────────────────────────── 칸 ─────────────────────────────
 
     // MapPlacementArea가 실행 중에 까는 격자와 똑같은 것을 에디터에서 미리 계산한다.
-    // (MapPlacementArea.BuildGrid와 같은 식이다. 한쪽만 고치면 배치가 어긋나므로 함께 고쳐야 한다)
+    // 계산은 MapPlacementArea.TryBuildLayout 한 곳뿐이라 실행 중과 어긋날 수 없다.
+    // (예전에는 같은 식을 양쪽에 적어 두어서 한쪽만 고치면 배치가 반 칸씩 어긋났다)
     public static bool TryResolveGrid(out Vector3 origin, out float cellSize, out int columns, out int rows)
     {
         origin = Vector3.zero;
@@ -161,37 +173,17 @@ public static class TrapPlacement
             return false;
         }
 
-        SerializedObject so = new SerializedObject(area);
-        Transform ground = so.FindProperty("ground").objectReferenceValue as Transform;
-
-        if (ground == null)
+        // 실행 중에 격자를 까는 것과 완전히 같은 코드를 그대로 부른다.
+        if (!area.TryBuildLayout(out PlacementGridLayout.Result layout, out string failure))
         {
-            string groundName = so.FindProperty("groundObjectName").stringValue;
-            GameObject found = string.IsNullOrEmpty(groundName) ? null : GameObject.Find(groundName);
-            ground = found != null ? found.transform : null;
-        }
-
-        if (ground == null || !TryMeasureVisualBounds(ground.gameObject, out Bounds bounds))
-        {
+            Debug.LogWarning($"[격자] {area.name}: {failure}", area);
             return false;
         }
 
-        float padding = so.FindProperty("edgePadding").floatValue;
-        float surfaceOffset = so.FindProperty("surfaceOffset").floatValue;
-        cellSize = Mathf.Max(0.01f, so.FindProperty("cellSize").floatValue);
-
-        columns = Mathf.Max(1, Mathf.FloorToInt((bounds.size.x - padding * 2f) / cellSize));
-        rows = Mathf.Max(1, Mathf.FloorToInt((bounds.size.z - padding * 2f) / cellSize));
-
-        // 남는 자투리는 양쪽에 반씩 나눠 격자를 맵 한가운데에 맞춘다.
-        float marginX = (bounds.size.x - columns * cellSize) * 0.5f;
-        float marginZ = (bounds.size.z - rows * cellSize) * 0.5f;
-
-        origin = new Vector3(
-            bounds.min.x + marginX,
-            ground.position.y + surfaceOffset,
-            bounds.min.z + marginZ);
-
+        origin = layout.Origin;
+        cellSize = layout.CellSize;
+        columns = layout.Columns;
+        rows = layout.Rows;
         return true;
     }
 
