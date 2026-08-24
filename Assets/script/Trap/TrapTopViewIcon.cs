@@ -345,16 +345,15 @@ public class TrapTopViewIcon : MonoBehaviour
         return new Color(fill.r * 0.72f, fill.g * 0.72f, fill.b * 0.72f, Mathf.Clamp01(fill.a + 0.4f));
     }
 
-    // 인스펙터에 그림을 넣어 두지 않았으면, 함정이 어떤 원소인지 보고 조합창과 같은 아이콘을 쓴다.
+    // 인스펙터에 넣어 둔 그림이 있을 때만 그린다.
+    //
+    // 예전에는 비어 있으면 함정의 원소 아이콘(불 함정 → 불)을 대신 썼는데,
+    // 그 아이콘이 조합창에서 끌어다 놓는 원소 아이콘과 똑같이 생겨서
+    // "불 함정 위에 불 원소가 이미 올라가 있다"로 읽혔다.
+    // 어떤 함정인지는 원반 색(불=주황, 물=파랑)으로 이미 알 수 있으므로 그림은 넣지 않는다.
     private Sprite ResolveIcon()
     {
-        if (icon != null)
-        {
-            return icon;
-        }
-
-        ElementTrapCube cube = Root.GetComponentInChildren<ElementTrapCube>(true);
-        return cube != null && cube.ElementData != null ? cube.ElementData.Icon : null;
+        return icon;
     }
 
     // 함정이 도로에서 차지하는 자리(가로·세로)와 바닥 높이를 잰다.

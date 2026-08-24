@@ -138,7 +138,7 @@ public static class PlacementGridLayout
             return Mathf.Max(0.05f, settings.RoadWidth / cells);
         }
 
-        reason = "도로를 못 찾아 기본 칸 크기 사용";
+        reason = "도로에 맞추지 않고 맵 전체를 고른 칸으로 덮음";
         return Mathf.Max(0.05f, settings.FallbackCellSize);
     }
 

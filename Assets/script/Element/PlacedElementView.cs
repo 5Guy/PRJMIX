@@ -6,6 +6,14 @@ public class PlacedElementView : MonoBehaviour
 {
     [SerializeField] private float diameterRatio = 0.6f;   // 칸 크기 대비 아이콘 지름
 
+    // 원소 크기를 잴 때 기준으로 삼는 칸 크기(미터).
+    //
+    // 칸 크기는 스테이지마다 다르다 — 도로 폭을 칸 수로 나눠서 정하므로 2.08m ~ 2.32m다.
+    // 그것을 그대로 곱하면 넓은 길에서는 원소 하나가 2m짜리 바위만 해져서 길을 다 가린다.
+    // 원소는 "손에 든 것을 길에 내려놓는" 크기여야 하므로, 칸이 아무리 커져도 이 기준(1m)
+    // 이상으로는 키우지 않는다. 칸이 이보다 작으면 칸 밖으로 삐져나가지 않게 칸을 따라간다.
+    private const float ReferenceCellSize = 1f;
+
     private Transform round;
     private Transform flat;
     private float diameter;
@@ -25,7 +33,7 @@ public class PlacedElementView : MonoBehaviour
             diameterRatio = diameterRatioOverride.Value;
         }
 
-        diameter = cellSize * diameterRatio;
+        diameter = Mathf.Min(cellSize, ReferenceCellSize) * diameterRatio;
 
         round = roundVisual != null ? roundVisual : BuildRound(data);
 
