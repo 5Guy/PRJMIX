@@ -1980,7 +1980,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   target: {fileID: 853285975}
-  defaultOffset: {x: 16.42, y: 5.9, z: -14.18}
+  defaultOffset: {x: 5.35, y: 5.16, z: -15.1}
   defaultEuler: {x: 18.7, y: -23.59, z: 0}
   defaultOrthoSize: 8
   topOffset: {x: 0, y: 40, z: 0}
@@ -1995,8 +1995,8 @@ MonoBehaviour:
   lockTopViewToAnchor: 1
   allowZoom: 1
   zoomStep: 0.12
-  minZoom: 0.35
-  maxZoom: 0.8
+  minZoom: 0.4
+  maxZoom: 1.25
 --- !u!1 &730715034
 GameObject:
   m_ObjectHideFlags: 0
@@ -4642,11 +4642,11 @@ PrefabInstance:
     m_Modifications:
     - target: {fileID: 1486025110037080242, guid: a052a62efd722fb4583de677c9ac0e48, type: 3}
       propertyPath: m_LocalPosition.x
-      value: 7.1899996
+      value: 4.87
       objectReference: {fileID: 0}
     - target: {fileID: 1486025110037080242, guid: a052a62efd722fb4583de677c9ac0e48, type: 3}
       propertyPath: m_LocalPosition.y
-      value: 2.0999994
+      value: 2.099999
       objectReference: {fileID: 0}
     - target: {fileID: 1486025110037080242, guid: a052a62efd722fb4583de677c9ac0e48, type: 3}
       propertyPath: m_LocalPosition.z
