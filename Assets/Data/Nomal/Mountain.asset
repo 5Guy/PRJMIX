@@ -18,4 +18,4 @@ MonoBehaviour:
   score: 1
   icon: {fileID: 21300000, guid: 18e2393626a701247bf4e442caa336ce, type: 3}
   description: "\uC0B0 \uC6D0\uC18C \uD759+\uD759"
-  worldModel: {fileID: 8346503625552333930, guid: 2e4531dc3154b2f46b0338b07c57fef1, type: 3}
+  worldModel: {fileID: 8665492886320790684, guid: 97cd7a6a2954e8f43bfbc14387a81b96, type: 3}

@@ -6,9 +6,23 @@ public class PlacedElementView : MonoBehaviour
 {
     [SerializeField] private float diameterRatio = 0.6f;   // 칸 크기 대비 아이콘 지름
 
+    // 원소 크기를 잴 때 기준으로 삼는 칸 크기(미터).
+    //
+    // 칸 크기는 스테이지마다 다르다 — 도로 폭을 칸 수로 나눠서 정하므로 2.08m ~ 2.32m다.
+    // 그것을 그대로 곱하면 넓은 길에서는 원소 하나가 2m짜리 바위만 해져서 길을 다 가린다.
+    // 원소는 "손에 든 것을 길에 내려놓는" 크기여야 하므로, 칸이 아무리 커져도 이 기준(1m)
+    // 이상으로는 키우지 않는다. 칸이 이보다 작으면 칸 밖으로 삐져나가지 않게 칸을 따라간다.
+    private const float ReferenceCellSize = 1f;
+
     private Transform round;
     private Transform flat;
     private float diameter;
+
+    // Init을 마쳤는지. 켜질 때 지금 시점에 맞추려면 만들어 둔 것이 있어야 한다.
+    private bool built;
+
+    // ElementVisual이 만드는 원소 그림 오브젝트의 이름.
+    private const string IconName = "Icon";
 
     // 사선뷰에서 보이는 3D 모습. 놓은 뒤에 이것을 움직이는 연출(떨어지는 나무다리 등)이 쓴다.
     public Transform Round => round;
@@ -25,7 +39,7 @@ public class PlacedElementView : MonoBehaviour
             diameterRatio = diameterRatioOverride.Value;
         }
 
-        diameter = cellSize * diameterRatio;
+        diameter = Mathf.Min(cellSize, ReferenceCellSize) * diameterRatio;
 
         round = roundVisual != null ? roundVisual : BuildRound(data);
 
@@ -37,6 +51,7 @@ public class PlacedElementView : MonoBehaviour
         }
 
         flat = BuildFlat(data);
+        built = true;
 
         Apply(CameraViewController.IsTopView);
     }
@@ -137,6 +152,16 @@ public class PlacedElementView : MonoBehaviour
     private void OnEnable()
     {
         CameraViewController.TopViewChanged += Apply;
+
+        // 꺼져 있는 동안 바뀐 시점을 놓치지 않는다.
+        //
+        // 꺼진 오브젝트는 TopViewChanged를 받지 못한다(OnDisable에서 구독을 끊는다).
+        // 탑뷰에서 껐다가 사선뷰로 바꾼 뒤 다시 켜면, 2D 아이콘이 켜진 그대로 남아
+        // 3D 모습 옆에 그림이 그대로 떠 있었다. 켜지는 순간 지금 시점에 다시 맞춘다.
+        if (built)
+        {
+            Apply(CameraViewController.IsTopView);
+        }
     }
 
     private void OnDisable()
@@ -151,6 +176,41 @@ public class PlacedElementView : MonoBehaviour
         if (flat != null)
         {
             flat.gameObject.SetActive(topView);
+        }
+
+        // 3D 모습이 밖에서 온 것(함정이 내어 준 시멘트 등)이면 그 안에 납작한 그림이
+        // 딸려 있을 수 있다. 위에서 통째로 켜 버리므로 여기서 다시 내린다.
+        // 원소 그림은 탑뷰 전용이다 — 사선뷰에서는 어떤 경로로 만들어졌든 보이면 안 된다.
+        HideStrayIcons(topView);
+    }
+
+    // 이 배치물에 딸린 납작한 그림을 시점에 맞춘다.
+    //
+    // flat 하나만 챙기면 놓치는 경우가 있다. 밖에서 받아 온 3D 모습 안에 그림이 들어 있거나,
+    // 시점이 바뀌는 동안 꺼져 있어 전환을 놓친 그림이 그렇다.
+    private void HideStrayIcons(bool topView)
+    {
+        foreach (SpriteRenderer icon in GetComponentsInChildren<SpriteRenderer>(true))
+        {
+            if (icon.name == IconName)
+            {
+                icon.enabled = topView;
+            }
+        }
+
+        if (round == null)
+        {
+            return;
+        }
+
+        // 밖에서 받아 온 3D 모습 안은 함부로 건드리지 않는다. 연출이 스프라이트로 그려질 수도
+        // 있어서다(불꽃, 반짝임). 우리가 만든 원소 그림(이름이 Icon)만 골라 내린다.
+        foreach (SpriteRenderer icon in round.GetComponentsInChildren<SpriteRenderer>(true))
+        {
+            if (icon.name == IconName)
+            {
+                icon.enabled = topView;
+            }
         }
     }
 

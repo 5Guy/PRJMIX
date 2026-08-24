@@ -107,6 +107,10 @@ public class PlacementSystem : MonoBehaviour
     [Tooltip("격자 평면보다 아래로 이만큼까지 지형을 찾는다(m)")]
     [SerializeField] private float surfaceProbeDown = 20f;
 
+    // 함정 뭉치에 속한 것이 길바닥에서 이만큼 넘게 떠 있으면 지형으로 세지 않는다(m).
+    // 하늘에 매달린 나무다리(20m)는 걸러 내고, 함정 자신(물·불)은 그대로 남는 높이다.
+    private const float TrapSkyHeight = 3f;
+
     [Header("아이콘 크기")]
     [Tooltip("맵에 놓인 원소 아이콘의 지름을 칸 크기에 대한 비율로 정한다 (모든 원소 공통). 1에 가까울수록 칸을 꽉 채운다")]
     [Range(0.1f, 1f)]
@@ -988,11 +992,80 @@ public class PlacementSystem : MonoBehaviour
             }
         }
 
-        return found ? best : grid.SurfaceY;
+        float ground = found ? best : grid.SurfaceY;
+
+        // 물 함정 위에 놓은 것은 물에 얹혀야 한다.
+        //
+        // 물의 판정 콜라이더는 트리거라 위 광선에 잡히지 않는다. 그래서 물 위에 올린 원소가
+        // 웅덩이 바닥 높이에 놓여 물에 잠겨 버렸다 — "물 위에는 안 올라가고 옆 칸에만 올라간다"로
+        // 보이던 것이 이것이다. 물의 윗면을 찾아 그보다 낮으면 끌어올린다.
+        float surface = SampleCounterTrapTopY(point);
+        return surface > ground ? surface : ground;
+    }
+
+    // 그 지점을 덮고 있는 파훼 함정(물웅덩이 등)의 제일 윗면. 없으면 float.MinValue.
+    //
+    // 함정 판정 콜라이더는 트리거라서 광선으로는 잡히지 않는다. 그 자리에 겹치는 것을
+    // 직접 훑어서 윗면을 잰다.
+    private float SampleCounterTrapTopY(Vector3 point)
+    {
+        float half = (surfaceProbeUp + surfaceProbeDown) * 0.5f;
+        Vector3 center = new Vector3(point.x, grid.SurfaceY + surfaceProbeUp - half, point.z);
+
+        Collider[] hits = Physics.OverlapBox(
+            center,
+            new Vector3(0.01f, half, 0.01f),
+            Quaternion.identity,
+            ~0,
+            QueryTriggerInteraction.Collide);
+
+        float best = float.MinValue;
+
+        foreach (Collider hit in hits)
+        {
+            if (hit == null || hit.GetComponentInParent<IElementCounterTrap>() == null)
+            {
+                continue;
+            }
+
+            // 함정 앞을 지나는지 보는 트리거는 함정의 몸이 아니다.
+            // 길게 누워 있어서 그 윗면을 바닥으로 삼으면 원소가 허공에 뜬다.
+            if (hit.GetComponentInParent<TrapApproachZone>() != null)
+            {
+                continue;
+            }
+
+            float top = SurfaceTopOf(hit);
+
+            if (top > best)
+            {
+                best = top;
+            }
+        }
+
+        return best;
+    }
+
+    // 함정 판정 콜라이더가 대신하는 "눈에 보이는 윗면". 잴 수 없으면 float.MinValue.
+    //
+    // 콜라이더 자체를 쓰면 안 된다. Stage_01 물 함정의 판정 콜라이더는 물에 빠지는 것을 잡으려고
+    // 세로로 세운 캡슐이라 윗면이 수면(0.04m)보다 1.15m나 높다. 거기에 얹으면 원소가 허공에 뜬다.
+    // 자식도 훑으면 안 된다 — 물 위에 떠 있는 화살표 표시(1.14m)가 잡힌다.
+    // 판정 콜라이더가 붙어 있는 바로 그 오브젝트의 모습만 본다. 그것이 물 그 자체다.
+    private static float SurfaceTopOf(Collider hit)
+    {
+        Renderer renderer = hit.GetComponent<Renderer>();
+
+        if (renderer == null || renderer is ParticleSystemRenderer)
+        {
+            return float.MinValue;
+        }
+
+        return renderer.bounds.max.y;
     }
 
     // 마우스가 가리키는 지형. 놓아 둔 원소와 함정 트리거는 건너뛴다.
-    private static bool TryRaycastTerrain(Ray ray, out RaycastHit result)
+    private bool TryRaycastTerrain(Ray ray, out RaycastHit result)
     {
         result = default;
 
@@ -1017,7 +1090,7 @@ public class PlacementSystem : MonoBehaviour
     //
     // 걸어다니는 플레이어를 지형으로 세면 플레이어가 서 있는 칸에 놓을 때
     // 원소가 플레이어 머리 위(1.2m)에 얹힌다. 놓아 둔 원소도 마찬가지로 위에 쌓인다.
-    private static bool IsTerrain(Collider collider)
+    private bool IsTerrain(Collider collider)
     {
         if (collider == null)
         {
@@ -1029,6 +1102,41 @@ public class PlacementSystem : MonoBehaviour
             return false;
         }
 
-        return collider.GetComponentInParent<PlacedElement>() == null;
+        if (collider.GetComponentInParent<PlacedElement>() != null)
+        {
+            return false;
+        }
+
+        // 함정 뭉치에 속하면서 길바닥에서 한참 떠 있는 것은 밟고 설 땅이 아니다.
+        //
+        // 물 함정 위 20m 하늘에는 나무다리가 떨어질 차례를 기다리며 매달려 있다.
+        // 그것을 땅으로 세면 두 가지가 한꺼번에 어긋난다.
+        //   - 물 칸에 놓은 원소가 도로가 아니라 하늘의 다리 위에 얹힌다.
+        //   - 함정을 찾는 상자도 그 높이에서 훑어서, 정작 발밑의 물을 놓친다.
+        //     그래서 "물 위에는 원소가 안 올라가고 옆 칸에 놓아야 올라가는" 것으로 보인다.
+        // 건물 옥상은 함정 뭉치가 아니므로 그대로 놓을 수 있다.
+        if (grid != null
+            && collider.bounds.min.y > grid.SurfaceY + TrapSkyHeight
+            && BelongsToCounterTrap(collider))
+        {
+            return false;
+        }
+
+        return true;
+    }
+
+    // 파훼 함정 뭉치(함정 오브젝트와 그 형제들)에 속한 콜라이더인지.
+    //
+    // 함정 스크립트가 늘 조상에 있지는 않다. Stage_01 물 함정은 관리 스크립트와 물 모델,
+    // 나무다리가 같은 뿌리 아래 형제로 놓여 있다. 그래서 뿌리까지 올라가 확인한다.
+    private static bool BelongsToCounterTrap(Collider collider)
+    {
+        if (collider.GetComponentInParent<IElementCounterTrap>() != null)
+        {
+            return true;
+        }
+
+        Transform root = collider.transform.root;
+        return root != collider.transform && root.GetComponentInChildren<IElementCounterTrap>(true) != null;
     }
 }

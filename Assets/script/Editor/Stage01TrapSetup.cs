@@ -101,6 +101,12 @@ public static class Stage01TrapSetup
             return;
         }
 
+        // 예전 함정을 끄기 전에 나무다리를 빼낸다.
+        //
+        // 다리는 예전 물 함정의 자식으로 매달려 있다. 그대로 두면 함정을 끌 때 같이 꺼져서,
+        // 나무다리로 파훼했을 때 하늘에서 떨어질 다리가 아예 없어진다.
+        Transform bridge = RescueWoodBridge(scene);
+
         DeactivateExistingTraps(scene, root);
 
         bool hasGrid = TrapPlacement.TryResolveGrid(out Vector3 gridOrigin, out float cellSize, out int _, out int _);
@@ -172,11 +178,89 @@ public static class Stage01TrapSetup
             Debug.Log($"[Stage_01 함정] {entry.PrefabName} → {instance.transform.position} (파훼: {entry.Counter})", instance);
         }
 
+        MoveWoodBridgeOverWater(bridge, root);
+
         EditorSceneManager.MarkSceneDirty(scene);
         EditorSceneManager.SaveScene(scene);
         AssetDatabase.SaveAssets();
 
         Debug.Log($"[Stage_01 함정] 함정 {placed}개를 '{TrapRootName}' 아래에 깔고 씬을 저장했습니다.");
+    }
+
+    // 물 함정이 나무다리로 파훼될 때 하늘에서 떨어뜨릴 다리.
+    // WaterTrap은 이 이름으로 씬을 뒤져서 찾는다(woodBridgeObjectName 기본값).
+    private const string WoodBridgeName = "Bridge";
+
+    // 다리를 예전 함정 밑에서 빼내 씬 뿌리로 옮긴다. 서 있던 자리는 그대로 둔다.
+    private static Transform RescueWoodBridge(Scene scene)
+    {
+        foreach (GameObject rootObject in scene.GetRootGameObjects())
+        {
+            foreach (Transform candidate in rootObject.GetComponentsInChildren<Transform>(true))
+            {
+                if (candidate.name != WoodBridgeName)
+                {
+                    continue;
+                }
+
+                if (candidate.parent != null)
+                {
+                    Undo.SetTransformParent(candidate, null, "나무다리 빼내기");
+                    candidate.SetParent(null, true);
+                }
+
+                candidate.gameObject.SetActive(true);
+                EditorUtility.SetDirty(candidate.gameObject);
+
+                Debug.Log($"[Stage_01 함정] 나무다리 '{candidate.name}'를 씬 뿌리로 옮겼습니다. (함정을 꺼도 남아 있도록)", candidate);
+                return candidate;
+            }
+        }
+
+        Debug.LogWarning(
+            $"[Stage_01 함정] 씬에서 '{WoodBridgeName}'를 찾지 못했습니다. " +
+            "나무다리로 물 함정을 파훼해도 떨어질 다리가 없습니다.");
+        return null;
+    }
+
+    // 새로 깐 물 함정 바로 위로 다리를 옮긴다.
+    //
+    // WaterTrap은 다리를 "높이만" 내린다 — 가로 위치와 각도는 씬에 놓인 그대로 쓴다.
+    // 함정이 다른 자리로 옮겨 갔는데 다리를 두고 오면, 다리가 엉뚱한 데로 떨어져
+    // 물은 그대로 남고 길도 열리지 않는다.
+    private static void MoveWoodBridgeOverWater(Transform bridge, Transform trapRoot)
+    {
+        if (bridge == null || trapRoot == null)
+        {
+            return;
+        }
+
+        WaterTrap water = trapRoot.GetComponentInChildren<WaterTrap>(true);
+        if (water == null)
+        {
+            return;
+        }
+
+        Physics.SyncTransforms();
+
+        // 물 함정 하나만 봐야 한다.
+        // transform.root는 함정을 다 담고 있는 'Traps'라, 그것으로 재면 옆 함정의 자리가 잡힌다.
+        Transform trapObject = water.transform;
+        while (trapObject.parent != null && trapObject.parent != trapRoot)
+        {
+            trapObject = trapObject.parent;
+        }
+
+        Collider anchor = TrapPlacement.ResolveAnchorCollider(trapObject.gameObject);
+        Vector3 target = anchor != null ? anchor.bounds.center : trapObject.position;
+
+        Undo.RecordObject(bridge, "나무다리 옮기기");
+
+        // 높이는 건드리지 않는다. 지금 서 있는 높이가 곧 "떨어지기 시작하는 하늘 높이"다.
+        bridge.position = new Vector3(target.x, bridge.position.y, target.z);
+        EditorUtility.SetDirty(bridge);
+
+        Debug.Log($"[Stage_01 함정] 나무다리를 물 함정 위({target.x:0.00}, {target.z:0.00})로 옮겼습니다.", bridge);
     }
 
     // 플레이어에서 깃발까지, 진행 방향으로 잰 거리. 깃발이 없으면 넉넉한 기본값.
