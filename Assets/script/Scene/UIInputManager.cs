@@ -51,6 +51,13 @@ public class UIInputManager : MonoBehaviour
             return;
         }
 
+        // 도감이 열려 있으면 Esc는 도감만 닫는다.
+        if (EncyclopediaPanel.IsOpen)
+        {
+            EncyclopediaPanel.CloseIfOpen();
+            return;
+        }
+
         OnPausePressed?.Invoke();
     }
 }
