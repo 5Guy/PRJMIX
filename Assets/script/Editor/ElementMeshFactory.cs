@@ -1,4 +1,4 @@
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using UnityEngine;
 
 // 원소 모델을 세울 때 쓰는 도형 공장.
@@ -314,7 +314,102 @@ public static class ElementMeshFactory
         return Build(name, vertices, triangles);
     }
 
+    // 땅에 고인 물 한 방울. 물웅덩이의 몸통이 된다.
+    //
+    // 원반을 겹쳐서는 웅덩이가 되지 않는다 — 테두리가 정확한 원이라 위에서 보면 맨홀
+    // 뚜껑으로 보였다. 물이 흐른 자리는 둘레가 울퉁불퉁하게 삐져 나오고, 표면은 가운데가
+    // 넓게 부풀고 가장자리에서 급히 땅으로 말려 들어가는 물방울(비드) 모양이다.
+    //
+    // 둘레는 각도에 사인 몇 개를 더해 정한다. 난수를 쓰면 만들 때마다 모양이 달라져서
+    // 눈으로 맞춰 둔 웅덩이 모습이 유지되지 않는다.
+    //   squash  가로세로 비. 1보다 작으면 옆으로 퍼진다.
+    //   turn    둘레 무늬를 돌린다. 겹쳐 쓰는 조각끼리 어긋나 보이게 할 때 쓴다.
+    public static Mesh Puddle(string name, float radius, float height, float squash, float turn, int sides, int rings)
+    {
+        Vector3 Point(int side, float t)
+        {
+            float angle = side / (float)sides * Mathf.PI * 2f;
+            float wobble = 1f
+                + 0.15f * Mathf.Cos(angle * 3f + turn + 0.6f)
+                + 0.09f * Mathf.Cos(angle * 5f + turn - 1.1f)
+                + 0.05f * Mathf.Cos(angle * 7f + turn + 2.2f);
+
+            // 가운데는 넓고 평평하게, 가장자리에서 빠르게 떨어지는 곡선.
+            //
+            // Cos은 t=1에서 딱 0이 아니라 아주 작은 음수(-4e-8)가 나온다. 음수를 Pow에 넣으면
+            // NaN이 되고, 정점 하나가 NaN이면 메시 경계가 통째로 NaN이 되어 화면에서 사라진다.
+            float r = radius * wobble * t;
+            float y = height * Mathf.Pow(Mathf.Max(0f, Mathf.Cos(t * Mathf.PI * 0.5f)), 0.45f);
+
+            return new Vector3(Mathf.Cos(angle) * r, y, Mathf.Sin(angle) * r * squash);
+        }
+
+        List<Vector3> vertices = new List<Vector3>();
+        List<int> triangles = new List<int>();
+
+        Vector3 top = new Vector3(0f, height, 0f);
+
+        for (int i = 0; i < sides; i++)
+        {
+            int next = (i + 1) % sides;
+
+            // 수면
+            for (int ring = 0; ring < rings; ring++)
+            {
+                float t0 = ring / (float)rings;
+                float t1 = (ring + 1) / (float)rings;
+
+                if (ring == 0)
+                {
+                    // 감는 방향이 옆의 사각형과 같아야 한다. 거꾸로 감으면 수면 가운데만
+                    // 아래를 보게 되어 웅덩이 한복판에 검은 얼룩이 앉는다.
+                    AddTriangle(vertices, triangles, top, Point(next, t1), Point(i, t1));
+                    continue;
+                }
+
+                AddQuad(vertices, triangles, Point(i, t0), Point(next, t0), Point(next, t1), Point(i, t1));
+            }
+
+            // 바닥. 물이 닿은 자리를 그대로 덮는다. 아래를 보게 감는다.
+            AddTriangle(vertices, triangles, Vector3.zero, Point(i, 1f), Point(next, 1f));
+        }
+
+        Mesh mesh = Build(name, vertices, triangles);
+
+        // 물은 각져 보이면 안 된다. 같은 자리에 있는 정점들의 법선을 하나로 모아 매끈하게 만든다.
+        Smooth(mesh);
+        return mesh;
+    }
+
     // ───────────────────────── 만드는 데 쓰는 것들 ─────────────────────────
+
+    // 면마다 따로 두었던 정점의 법선을 평균 내어 매끈한 곡면으로 보이게 한다.
+    //
+    // Build은 저폴리 느낌을 살리려고 면마다 정점을 따로 둔다(각진 그림자). 물처럼 매끈해야
+    // 하는 것에는 그것이 어울리지 않아서, 만든 뒤에 같은 자리 정점을 묶어 법선을 고쳐 준다.
+    private static void Smooth(Mesh mesh)
+    {
+        Vector3[] positions = mesh.vertices;
+        Vector3[] normals = mesh.normals;
+
+        Dictionary<Vector3Int, Vector3> sums = new Dictionary<Vector3Int, Vector3>();
+
+        Vector3Int Key(Vector3 p) => new Vector3Int(
+            Mathf.RoundToInt(p.x * 10000f), Mathf.RoundToInt(p.y * 10000f), Mathf.RoundToInt(p.z * 10000f));
+
+        for (int i = 0; i < positions.Length; i++)
+        {
+            Vector3Int key = Key(positions[i]);
+            sums[key] = sums.TryGetValue(key, out Vector3 sum) ? sum + normals[i] : normals[i];
+        }
+
+        for (int i = 0; i < positions.Length; i++)
+        {
+            normals[i] = sums[Key(positions[i])].normalized;
+        }
+
+        mesh.normals = normals;
+    }
 
     // 면이 바깥을 보게 맞춘다.
     //

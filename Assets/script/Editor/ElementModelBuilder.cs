@@ -1,4 +1,4 @@
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.IO;
 using UnityEditor;
 using UnityEngine;
@@ -31,6 +31,9 @@ public static class ElementModelBuilder
     private static readonly Color SoilDark = new Color(0.29f, 0.19f, 0.11f);
     private static readonly Color WaterBlue = new Color(0.16f, 0.52f, 0.88f);
     private static readonly Color WaterLight = new Color(0.42f, 0.74f, 0.96f);
+    private static readonly Color PuddleBlue = new Color(0.62f, 0.82f, 0.92f);
+    private static readonly Color PuddleRim = new Color(0.35f, 0.65f, 0.85f);
+    private static readonly Color PuddleShine = new Color(0.93f, 0.98f, 1f);
     private static readonly Color MudBrown = new Color(0.35f, 0.24f, 0.13f);
     private static readonly Color MudLight = new Color(0.46f, 0.33f, 0.19f);
     private static readonly Color SwampGreen = new Color(0.22f, 0.34f, 0.19f);
@@ -151,25 +154,56 @@ public static class ElementModelBuilder
 
     // ───────────────────────────── 물 ─────────────────────────────
 
-    // 네모난 물 타일 대신 "웅덩이에 떨어지는 물방울". 위에서 봐도 옆에서 봐도 물로 읽힌다.
+    // 땅에 고인 물웅덩이.
+    //
+    // 원반을 겹쳐 쌓았을 때는 테두리가 정확한 원이라 위에서 보면 맨홀 뚜껑이었다.
+    // 웅덩이로 보이려면 둘레가 물이 흐른 대로 삐뚤빼뚤해야 하고(Puddle 메시), 수면에
+    // 빛이 번지는 흰 줄이 있어야 한다. 물결 고리는 오히려 동심원이라 뚜껑처럼 보였다 — 뺀다.
+    //
+    // 모델은 제일 긴 축이 칸 지름(0.85m)에 맞춰 줄어든다. 여기서는 폭이 제일 길므로
+    // 폭이 0.85m, 높이는 5cm쯤 되는 납작한 웅덩이가 된다.
     private static GameObject BuildWater()
     {
         GameObject root = new GameObject("Water");
 
-        // 물결이 퍼지는 자리
-        Disc(root, "Ripple", 0.60f, 0.02f, Vector3.zero, WaterLight, 0.6f);
+        // 물 밑에 깔리는 진한 테두리. 물보다 조금 넓고 확실히 낮아서 둘레로만 비어져 나온다.
+        //
+        // 높이를 물의 절반으로 낮춰야 한다. 조금만 낮추면 가장자리에서는 테두리가 물보다
+        // 높아져(수면이 먼저 떨어진다) 웅덩이가 아니라 물이 담긴 분화구로 보인다.
+        Puddle(root, "Rim", 0.545f, 0.040f, 0.62f, 0f, Vector3.zero, PuddleRim, 0.55f);
 
-        // 웅덩이
-        Disc(root, "Pool", 0.44f, 0.07f, new Vector3(0f, 0.01f, 0f), WaterBlue, 0.75f);
+        // 고인 물
+        Puddle(root, "Pool", 0.51f, 0.082f, 0.62f, 0f, Vector3.zero, PuddleBlue, 0.75f);
 
-        // 물방울 — 아래는 둥글고 위는 뾰족하다
-        Teardrop(root, "Drop", 0.27f, 0.62f, 0f, new Vector3(0f, 0.06f, 0f), WaterBlue, 0.85f);
-
-        // 튀어 오른 잔방울
-        Teardrop(root, "Splash1", 0.09f, 0.22f, 0.03f, new Vector3(0.31f, 0.04f, -0.15f), WaterLight, 0.85f);
-        Teardrop(root, "Splash2", 0.07f, 0.16f, -0.02f, new Vector3(-0.27f, 0.04f, 0.20f), WaterLight, 0.85f);
+        // 수면에 번지는 빛. 두 덩이를 어긋나게 붙여 구부러진 줄로 읽히게 한다.
+        Shine(root, "Shine1", new Vector3(-0.15f, 0.080f, 0.04f), new Vector3(0.27f, 0.014f, 0.070f), -22f);
+        Shine(root, "Shine2", new Vector3(0.01f, 0.080f, 0.10f), new Vector3(0.17f, 0.014f, 0.062f), 32f);
+        Shine(root, "Shine3", new Vector3(0.19f, 0.076f, -0.08f), new Vector3(0.19f, 0.014f, 0.056f), -20f);
+        Shine(root, "Shine4", new Vector3(0.31f, 0.072f, -0.03f), new Vector3(0.11f, 0.014f, 0.046f), 28f);
 
         return root;
+    }
+
+    // 둘레가 삐뚤빼뚤한 납작한 물덩이.
+    private static void Puddle(
+        GameObject root, string name, float radius, float height, float squash, float turn,
+        Vector3 position, Color color, float smoothness)
+    {
+        Mesh mesh = ElementMeshFactory.Puddle($"Element_{root.name}_{name}", radius, height, squash, turn, 30, 5);
+        GameObject piece = Part(root, name, mesh, position, Vector3.zero, Vector3.one, color, smoothness);
+
+        // 납작한 물 위에 물 자신의 그림자가 드리우면, 빛이 낮게 들 때 수면에 검은 얼룩(줄무늬)이
+        // 생긴다. 웅덩이는 그림자를 만들지 않는다 — 바닥에 깔린 물이라 어차피 그림자가 없다.
+        piece.GetComponent<Renderer>().shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+    }
+
+    // 수면에 뜬 흰 빛 한 줄.
+    private static void Shine(GameObject root, string name, Vector3 position, Vector3 scale, float yaw)
+    {
+        GameObject piece = Primitive(root, name, PrimitiveType.Sphere, position, new Vector3(0f, yaw, 0f), scale, PuddleShine, 0.85f, null);
+
+        // 빛이 그림자를 드리우면 수면 가운데에 검은 얼룩이 생긴다. 빛나는 자리는 그림자를 만들지 않는다.
+        piece.GetComponent<Renderer>().shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
     }
 
     // ───────────────────────────── 흙 ─────────────────────────────
@@ -581,7 +615,7 @@ public static class ElementModelBuilder
         Primitive(root, name, PrimitiveType.Cylinder, position, Vector3.zero, scale, color, smoothness, null);
     }
 
-    private static void Primitive(
+    private static GameObject Primitive(
         GameObject root, string name, PrimitiveType type,
         Vector3 position, Vector3 euler, Vector3 scale, Color color, float smoothness, Color? emission)
     {
@@ -592,9 +626,10 @@ public static class ElementModelBuilder
         piece.transform.localRotation = Quaternion.Euler(euler);
         piece.transform.localScale = scale;
         piece.GetComponent<Renderer>().sharedMaterial = GetMaterial(color, smoothness, emission);
+        return piece;
     }
 
-    private static void Part(
+    private static GameObject Part(
         GameObject root, string name, Mesh mesh,
         Vector3 position, Vector3 euler, Vector3 scale, Color color, float smoothness, Color? emission = null)
     {
@@ -606,6 +641,7 @@ public static class ElementModelBuilder
 
         piece.GetComponent<MeshFilter>().sharedMesh = SaveMesh(mesh);
         piece.GetComponent<MeshRenderer>().sharedMaterial = GetMaterial(color, smoothness, emission);
+        return piece;
     }
 
     // 직접 만든 메시는 프리팹 안에 저장되지 않는다. 에셋으로 따로 남겨야 다음에 열어도 남아 있다.

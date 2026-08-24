@@ -178,8 +178,7 @@ public static class TrapCellAligner
                 continue;
             }
 
-            GameObject prefabRoot = PrefabUtility.GetOutermostPrefabInstanceRoot(part.gameObject);
-            Transform root = prefabRoot != null ? prefabRoot.transform : part.transform;
+            Transform root = ResolveMoveRoot(part);
 
             if (seen.Add(root))
             {
@@ -205,8 +204,49 @@ public static class TrapCellAligner
             return null;
         }
 
+        return ResolveMoveRoot(part);
+    }
+
+    // 함정 하나를 통째로 옮기려면 어느 오브젝트를 잡아야 하는지.
+    //
+    // 프리팹 인스턴스면 그 뿌리가 곧 함정 하나다.
+    // 프리팹이 아니면(손으로 짜 맞춘 함정) 부품이 붙은 오브젝트만 잡아서는 안 된다.
+    // Stage_01의 물 함정이 그렇다.
+    //
+    //   WaterTrap 1            <- 실제로 옮겨야 하는 오브젝트
+    //   ├─ WaterTrapModel      <- 판정 콜라이더가 여기 있다
+    //   └─ WaterTrapManagement <- WaterTrap 스크립트가 여기 있다
+    //
+    // 스크립트가 붙은 쪽만 옮기면 판정은 제자리에 남아 함정이 두 조각으로 갈라진다.
+    // 그래서 "같은 함정만 품고 있는" 동안 부모로 계속 올라간다.
+    // 부모가 다른 함정까지 품기 시작하면(Traps 같은 그릇) 거기서 멈춘다.
+    private static Transform ResolveMoveRoot(Component part)
+    {
         GameObject prefabRoot = PrefabUtility.GetOutermostPrefabInstanceRoot(part.gameObject);
-        return prefabRoot != null ? prefabRoot.transform : part.transform;
+        if (prefabRoot != null)
+        {
+            return prefabRoot.transform;
+        }
+
+        Transform root = part.transform;
+        int parts = CountTrapParts(root);
+
+        while (root.parent != null && CountTrapParts(root.parent) == parts)
+        {
+            root = root.parent;
+        }
+
+        return root;
+    }
+
+    // 이 오브젝트 아래에 함정 부품이 몇 개 있는지. 부모로 올라가도 될지 판단하는 데 쓴다.
+    private static int CountTrapParts(Transform node)
+    {
+        return node.GetComponentsInChildren<ElementTrapCube>(true).Length
+            + node.GetComponentsInChildren<WaterTrap>(true).Length
+            + node.GetComponentsInChildren<Sandstorm>(true).Length
+            + node.GetComponentsInChildren<ChargingCar>(true).Length
+            + node.GetComponentsInChildren<ChargingBull>(true).Length;
     }
 
     // 고른 오브젝트가 함정 부품이거나, 함정 부품을 품고 있거나, 함정 부품의 자식인지 본다.

@@ -1,4 +1,4 @@
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Text;
 using UnityEditor;
 using UnityEngine;
@@ -22,6 +22,28 @@ public static class TrapWiringChecker
 
     // 동선에서 이만큼 벗어나면 플레이어가 닿지 않는다고 본다.
     private const float PathTolerance = 1.5f;
+
+    // 배치 모드용: 스테이지를 하나씩 열어 가며 점검한다.
+    // (-executeMethod TrapWiringChecker.CheckAllStages)
+    //
+    // 배치 모드는 아무 씬도 열지 않은 채 시작한다. 그냥 Check()를 부르면 "함정 0개,
+    // 플레이어 없음"만 나온다 — 문제가 없다는 뜻이 아니라 아무것도 보지 않았다는 뜻이다.
+    public static void CheckAllStages()
+    {
+        foreach (string path in new[]
+        {
+            "Assets/Scenes/Stage_01.unity",
+            "Assets/Scenes/Stage_02.unity",
+            "Assets/Scenes/Stage_03.unity",
+        })
+        {
+            UnityEditor.SceneManagement.EditorSceneManager.OpenScene(
+                path, UnityEditor.SceneManagement.OpenSceneMode.Single);
+            Debug.Log("──────────────────────────────────────────");
+            Debug.Log($"[함정 점검] 씬: {path}");
+            Check();
+        }
+    }
 
     [MenuItem("Tools/Molra/함정 파훼 점검")]
     public static void Check()
