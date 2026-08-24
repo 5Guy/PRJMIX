@@ -852,7 +852,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 5699638130888437079, guid: 7077197b5fa00d64984c1429b588b48d, type: 3}
       propertyPath: m_LocalPosition.y
-      value: 1.32
+      value: 0.8712202
       objectReference: {fileID: 0}
     - target: {fileID: 5699638130888437079, guid: 7077197b5fa00d64984c1429b588b48d, type: 3}
       propertyPath: m_LocalPosition.z
@@ -1534,6 +1534,10 @@ PrefabInstance:
     - target: {fileID: 3467826661703224151, guid: 95d672d8b4803504d84764e3a8257dd0, type: 3}
       propertyPath: m_LocalPosition.y
       value: 12.84
+      objectReference: {fileID: 0}
+    - target: {fileID: 3631015452076838528, guid: 95d672d8b4803504d84764e3a8257dd0, type: 3}
+      propertyPath: m_Size.x
+      value: 0.68
       objectReference: {fileID: 0}
     - target: {fileID: 3631015452076838528, guid: 95d672d8b4803504d84764e3a8257dd0, type: 3}
       propertyPath: m_IsTrigger
@@ -2827,11 +2831,11 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 4265038427819008437, guid: 35c3e13e6766b004694b9efdb0d4757b, type: 3}
       propertyPath: m_LocalPosition.x
-      value: -2.194001
+      value: 0.108999014
       objectReference: {fileID: 0}
     - target: {fileID: 4265038427819008437, guid: 35c3e13e6766b004694b9efdb0d4757b, type: 3}
       propertyPath: m_LocalPosition.y
-      value: 2.1
+      value: 2.1089754
       objectReference: {fileID: 0}
     - target: {fileID: 4265038427819008437, guid: 35c3e13e6766b004694b9efdb0d4757b, type: 3}
       propertyPath: m_LocalPosition.z
@@ -6107,6 +6111,40 @@ GameObject:
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
   m_IsActive: 1
+--- !u!1001 &900000000000000201
+PrefabInstance:
+  m_ObjectHideFlags: 0
+  serializedVersion: 2
+  m_Modification:
+    serializedVersion: 3
+    m_TransformParent: {fileID: 0}
+    m_Modifications:
+    - target: {fileID: 900000000000000101, guid: 0e7ca56dbd164239b606b0c105fee658, type: 3}
+      propertyPath: m_Name
+      value: StageIntroImage
+      objectReference: {fileID: 0}
+    m_RemovedComponents: []
+    m_RemovedGameObjects: []
+    m_AddedGameObjects: []
+    m_AddedComponents: []
+  m_SourcePrefab: {fileID: 100100000, guid: 0e7ca56dbd164239b606b0c105fee658, type: 3}
+--- !u!1001 &900000000000000401
+PrefabInstance:
+  m_ObjectHideFlags: 0
+  serializedVersion: 2
+  m_Modification:
+    serializedVersion: 3
+    m_TransformParent: {fileID: 0}
+    m_Modifications:
+    - target: {fileID: 900000000000000201, guid: 9a09efd6ed6d481fb2cfea5afff3bb90, type: 3}
+      propertyPath: m_Name
+      value: EncyclopediaSystem
+      objectReference: {fileID: 0}
+    m_RemovedComponents: []
+    m_RemovedGameObjects: []
+    m_AddedGameObjects: []
+    m_AddedComponents: []
+  m_SourcePrefab: {fileID: 100100000, guid: 9a09efd6ed6d481fb2cfea5afff3bb90, type: 3}
 --- !u!4 &1003535454508579801
 Transform:
   m_ObjectHideFlags: 0
@@ -6299,7 +6337,7 @@ PrefabInstance:
       objectReference: {fileID: 11400000, guid: 6ee29ce3b74900a4d93c7379ececdaf8, type: 2}
     - target: {fileID: 1550714937034876352, guid: eef5e37e765c64e40bf0adce03d5eb47, type: 3}
       propertyPath: counterCharges.Array.data[0].required
-      value: 2
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 3312607220935795712, guid: eef5e37e765c64e40bf0adce03d5eb47, type: 3}
       propertyPath: m_Name
@@ -6726,40 +6764,6 @@ Transform:
   - {fileID: 1506385988}
   m_Father: {fileID: 5622968416872691718}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!1001 &900000000000000201
-PrefabInstance:
-  m_ObjectHideFlags: 0
-  serializedVersion: 2
-  m_Modification:
-    serializedVersion: 3
-    m_TransformParent: {fileID: 0}
-    m_Modifications:
-    - target: {fileID: 900000000000000101, guid: 0e7ca56dbd164239b606b0c105fee658, type: 3}
-      propertyPath: m_Name
-      value: StageIntroImage
-      objectReference: {fileID: 0}
-    m_RemovedComponents: []
-    m_RemovedGameObjects: []
-    m_AddedGameObjects: []
-    m_AddedComponents: []
-  m_SourcePrefab: {fileID: 100100000, guid: 0e7ca56dbd164239b606b0c105fee658, type: 3}
---- !u!1001 &900000000000000401
-PrefabInstance:
-  m_ObjectHideFlags: 0
-  serializedVersion: 2
-  m_Modification:
-    serializedVersion: 3
-    m_TransformParent: {fileID: 0}
-    m_Modifications:
-    - target: {fileID: 900000000000000201, guid: 9a09efd6ed6d481fb2cfea5afff3bb90, type: 3}
-      propertyPath: m_Name
-      value: EncyclopediaSystem
-      objectReference: {fileID: 0}
-    m_RemovedComponents: []
-    m_RemovedGameObjects: []
-    m_AddedGameObjects: []
-    m_AddedComponents: []
-  m_SourcePrefab: {fileID: 100100000, guid: 9a09efd6ed6d481fb2cfea5afff3bb90, type: 3}
 --- !u!1660057539 &9223372036854775807
 SceneRoots:
   m_ObjectHideFlags: 0
