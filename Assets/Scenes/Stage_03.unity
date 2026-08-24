@@ -5853,13 +5853,9 @@ PrefabInstance:
     serializedVersion: 3
     m_TransformParent: {fileID: 0}
     m_Modifications:
-    - target: {fileID: 2259180080544969834, guid: b9a312277999f5240a0a0d44c097b938, type: 3}
-      propertyPath: font
-      value: 
-      objectReference: {fileID: 0}
-    - target: {fileID: 2259180080544969834, guid: b9a312277999f5240a0a0d44c097b938, type: 3}
-      propertyPath: margin.y
-      value: 20
+    - target: {fileID: 8000000000000000012, guid: b9a312277999f5240a0a0d44c097b938, type: 3}
+      propertyPath: m_AnchoredPosition.y
+      value: -20
       objectReference: {fileID: 0}
     - target: {fileID: 3612269345778988822, guid: b9a312277999f5240a0a0d44c097b938, type: 3}
       propertyPath: m_Name
