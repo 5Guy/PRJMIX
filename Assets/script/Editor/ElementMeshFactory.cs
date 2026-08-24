@@ -314,14 +314,45 @@ public static class ElementMeshFactory
         return Build(name, vertices, triangles);
     }
 
+    // 웅덩이 둘레를 이루는 통제점. 열두 갈래로 나눠 두고 그 사이는 부드러운 곡선(Catmull-Rom)
+    // 으로 잇는다.
+    //
+    // 처음에는 사인을 몇 개 더해 둘레를 흔들었는데, 그러면 혹이 일정한 간격으로 촘촘히
+    // 반복되어 위에서 보면 톱니 달린 원 — 여전히 맨홀 뚜껑으로 보였다. 웅덩이답게 보이려면
+    // 크기가 저마다 다른 혹 몇 개가 삐져나온 아메바 모양이어야 한다. 그래서 통제점 값을
+    // 하나씩 손으로 얹었다: 큰 혹 하나(오른쪽 아래)가 두드러지고, 나머지는 크기가 들쭉날쭉
+    // 하게. 난수를 쓰면 만들 때마다 모양이 달라져서 눈으로 맞춰 둔 모습이 유지되지 않는다.
+    private static readonly float[] PuddleLobes =
+    {
+        1.06f, 1.02f, 1.14f, 0.98f, 0.86f, 0.96f, 1.04f, 0.92f, 0.84f, 0.98f, 1.16f, 0.96f,
+    };
+
+    private static float PuddleWobble(float angle, float turn)
+    {
+        int count = PuddleLobes.Length;
+        float f = (angle + turn) / (Mathf.PI * 2f) * count;
+        f = ((f % count) + count) % count;
+
+        int i = (int)f;
+        float t = f - i;
+
+        float p0 = PuddleLobes[(i - 1 + count) % count];
+        float p1 = PuddleLobes[i % count];
+        float p2 = PuddleLobes[(i + 1) % count];
+        float p3 = PuddleLobes[(i + 2) % count];
+
+        float t2 = t * t;
+        float t3 = t2 * t;
+        return 0.5f * (2f * p1 + (-p0 + p2) * t
+            + (2f * p0 - 5f * p1 + 4f * p2 - p3) * t2
+            + (-p0 + 3f * p1 - 3f * p2 + p3) * t3);
+    }
+
     // 땅에 고인 물 한 방울. 물웅덩이의 몸통이 된다.
     //
     // 원반을 겹쳐서는 웅덩이가 되지 않는다 — 테두리가 정확한 원이라 위에서 보면 맨홀
-    // 뚜껑으로 보였다. 물이 흐른 자리는 둘레가 울퉁불퉁하게 삐져 나오고, 표면은 가운데가
+    // 뚜껑으로 보였다. 물이 흐른 자리는 둘레가 아메바처럼 삐져 나오고, 표면은 가운데가
     // 넓게 부풀고 가장자리에서 급히 땅으로 말려 들어가는 물방울(비드) 모양이다.
-    //
-    // 둘레는 각도에 사인 몇 개를 더해 정한다. 난수를 쓰면 만들 때마다 모양이 달라져서
-    // 눈으로 맞춰 둔 웅덩이 모습이 유지되지 않는다.
     //   squash  가로세로 비. 1보다 작으면 옆으로 퍼진다.
     //   turn    둘레 무늬를 돌린다. 겹쳐 쓰는 조각끼리 어긋나 보이게 할 때 쓴다.
     public static Mesh Puddle(string name, float radius, float height, float squash, float turn, int sides, int rings)
@@ -329,10 +360,7 @@ public static class ElementMeshFactory
         Vector3 Point(int side, float t)
         {
             float angle = side / (float)sides * Mathf.PI * 2f;
-            float wobble = 1f
-                + 0.15f * Mathf.Cos(angle * 3f + turn + 0.6f)
-                + 0.09f * Mathf.Cos(angle * 5f + turn - 1.1f)
-                + 0.05f * Mathf.Cos(angle * 7f + turn + 2.2f);
+            float wobble = PuddleWobble(angle, turn);
 
             // 가운데는 넓고 평평하게, 가장자리에서 빠르게 떨어지는 곡선.
             //
