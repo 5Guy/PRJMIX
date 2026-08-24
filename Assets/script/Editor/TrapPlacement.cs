@@ -25,7 +25,7 @@ public static class TrapPlacement
 
         foreach (Renderer renderer in target.GetComponentsInChildren<Renderer>(true))
         {
-            if (renderer == null || renderer is ParticleSystemRenderer)
+            if (renderer == null || renderer is ParticleSystemRenderer || IsMarker(renderer))
             {
                 continue;
             }
@@ -42,6 +42,17 @@ public static class TrapPlacement
         }
 
         return any;
+    }
+
+    // 머리 위에 떠 있는 화살표 표시(TargetArrowMarker)는 함정의 몸이 아니라 "여기 있다"는 표시다.
+    //
+    // 불은 연출이 전부 파티클이라 잴 것이 없어야 정상인데, 화살표가 붙으면서
+    // 화살표 하나만 렌더러로 잡히게 되었다. 그것을 몸으로 알고 밑동을 바닥에 맞추면
+    // 공중에 떠 있던 화살표가 땅에 내려앉고 정작 불은 1.5m 넘게 땅속으로 꺼진다.
+    private static bool IsMarker(Renderer renderer)
+    {
+        return renderer.GetComponentInParent<TargetArrowMarker>() != null
+            || renderer.GetComponentInParent<TrapTopViewIcon>() != null;
     }
 
     // ───────────────────────────── 판정 위치 ─────────────────────────────
@@ -81,7 +92,49 @@ public static class TrapPlacement
         return null;
     }
 
-    // 판정 콜라이더가 목표 지점의 x/z 위에 오도록 뿌리를 옮긴다. 높이는 건드리지 않는다.
+    // 함정이 "여기 서 있다"고 보이는 자리. 칸에 맞출 때 이 점을 칸 한가운데에 둔다.
+    //
+    // 대개는 판정 콜라이더 한가운데가 곧 그 자리다.
+    // 불 함정만은 다르다. 불은 연출(불꽃 파티클)이 통째로 한 오브젝트에 달려 있고
+    // 판정 콜라이더는 "죽는 자리"를 좁히려고 그 안에서 일부러 줄이거나 옆으로 밀어 둔다.
+    //   Stage_01 : 콜라이더가 앞으로 0.51m 밀려 있다 (m_Center.z 0.172)
+    //   Stage_03 : 콜라이더가 옆으로 0.61m 밀려 있다 (m_Center.x 0.203)
+    // 이때 콜라이더 한가운데를 칸 한가운데에 두면, 정작 눈에 보이는 불꽃은 그만큼
+    // 칸 밖으로 밀려난다(칸 크기가 2.3m이니 4분의 1칸이다). 불은 연출이 달린 오브젝트를 기준으로 잡는다.
+    public static Vector3 ResolveAnchorPoint(GameObject target)
+    {
+        // Collider.bounds도, 자식의 위치도 물리/트랜스폼이 동기화된 뒤라야 방금 옮긴 자리를 돌려준다.
+        Physics.SyncTransforms();
+
+        Collider anchor = ResolveAnchorCollider(target);
+
+        if (TryResolveEffectRoot(target, anchor, out Transform effect))
+        {
+            return effect.position;
+        }
+
+        return anchor != null ? anchor.bounds.center : target.transform.position;
+    }
+
+    // 불처럼 "연출이 달린 오브젝트가 곧 함정의 자리"인 경우에만 그 오브젝트를 돌려준다.
+    //
+    // 모래바람도 상쇄 칸에 ElementTrapCube를 달고 있지만, 그 칸은 2.6m 공중에 떠 있는 딴 부품이라
+    // 기준으로 삼으면 안 된다. 기준 콜라이더가 이 큐브 자신의 것일 때만(=불) 참으로 본다.
+    private static bool TryResolveEffectRoot(GameObject target, Collider anchor, out Transform effect)
+    {
+        effect = null;
+
+        ElementTrapCube cube = target.GetComponentInChildren<ElementTrapCube>(true);
+        if (cube == null || (anchor != null && anchor.gameObject != cube.gameObject))
+        {
+            return false;
+        }
+
+        effect = cube.transform;
+        return true;
+    }
+
+    // 함정이 서 있는 자리가 목표 지점의 x/z 위에 오도록 뿌리를 옮긴다. 높이는 건드리지 않는다.
     public static void AlignHorizontally(Transform root, Vector3 target)
     {
         // Collider.bounds는 물리 쪽이 들고 있는 값이라, 방금 트랜스폼을 옮겼어도 바로 따라오지 않는다.
@@ -89,10 +142,7 @@ public static class TrapPlacement
         // 함정이 목표한 칸이 아니라 엉뚱한 칸에 가서 선다. (실제로 1m 가까이 어긋났다)
         Physics.SyncTransforms();
 
-        Collider anchor = ResolveAnchorCollider(root.gameObject);
-        Vector3 offset = anchor != null
-            ? anchor.bounds.center - root.position
-            : Vector3.zero;
+        Vector3 offset = ResolveAnchorPoint(root.gameObject) - root.position;
 
         root.position = new Vector3(target.x - offset.x, root.position.y, target.z - offset.z);
 
@@ -101,10 +151,6 @@ public static class TrapPlacement
     }
 
     // 오브젝트의 바닥이 groundY + lift 에 닿도록 내린다.
-    //
-    // 기준은 눈에 보이는 크기(Renderer)다. 연출이 전부 파티클이라 잴 것이 없으면
-    // (FireTrab, StormTrab이 그렇다) 판정 콜라이더의 바닥을 대신 쓴다.
-    // 둘 다 없을 때만 뿌리를 그 높이에 둔다.
     public static void SnapToGround(Transform target, float groundY, float lift = 0f)
     {
         // 판정 콜라이더로 바닥을 잴 수도 있으므로 물리 쪽 위치를 먼저 맞춰 둔다.
@@ -112,13 +158,9 @@ public static class TrapPlacement
 
         Vector3 position = target.position;
 
-        if (TryMeasureVisualBounds(target.gameObject, out Bounds bounds))
+        if (TryResolveBottomY(target.gameObject, out float bottomY))
         {
-            position.y += (groundY + lift) - bounds.min.y;
-        }
-        else if (ResolveAnchorCollider(target.gameObject) is Collider anchor)
-        {
-            position.y += (groundY + lift) - anchor.bounds.min.y;
+            position.y += (groundY + lift) - bottomY;
         }
         else
         {
@@ -128,12 +170,47 @@ public static class TrapPlacement
         target.position = position;
     }
 
+    // 이 함정의 "밑동"이 지금 어느 높이에 있는지. 이 높이를 바닥에 맞춘다.
+    private static bool TryResolveBottomY(GameObject target, out float bottomY)
+    {
+        // 눈에 보이는 몸이 있으면 그 아랫면이 곧 밑동이다.
+        if (TryMeasureVisualBounds(target, out Bounds bounds))
+        {
+            bottomY = bounds.min.y;
+            return true;
+        }
+
+        Collider anchor = ResolveAnchorCollider(target);
+
+        // 불처럼 연출이 전부 파티클이면 잴 몸이 없다. 이때 판정 콜라이더의 아랫면을 쓰면 안 된다.
+        // 불의 판정 큐브는 불꽃 밑동을 한가운데에 두고 위아래로 똑같이 뻗어 있어서,
+        // 그 아랫면을 바닥에 맞추면 불이 큐브 반쪽 높이(2m 남짓)만큼 공중에 뜬다.
+        // 불꽃 파티클은 연출이 달린 오브젝트의 원점에서 위로 솟으므로, 그 원점이 곧 밑동이다.
+        if (TryResolveEffectRoot(target, anchor, out Transform effect))
+        {
+            bottomY = effect.position.y;
+            return true;
+        }
+
+        if (anchor != null)
+        {
+            bottomY = anchor.bounds.min.y;
+            return true;
+        }
+
+        bottomY = 0f;
+        return false;
+    }
+
     // 그 지점의 바닥 높이. 콜라이더가 있으면 위에서 아래로 쏘아 재고, 없으면 fallback을 쓴다.
     //
     // 맨 위에 맞은 것을 그냥 쓰면 안 된다. Stage_01은 건물이 빽빽한 도시라
     // 위에서 쏜 광선이 지붕에 먼저 맞고, 함정이 건물 옥상에 올라앉아 버린다.
     // 플레이어가 서 있는 높이(fallbackY)에 가장 가까운 면을 도로로 본다.
-    public static float SampleGroundY(Vector3 worldPoint, float fallbackY)
+    //
+    // 옮기는 중인 함정 자신은 빼고 재야 한다(ignoreRoot). Stage_01의 불처럼 판정 큐브가
+    // 트리거가 아닌 함정은, 자기 큐브 윗면을 바닥으로 알고 그 위에 다시 올라앉는다.
+    public static float SampleGroundY(Vector3 worldPoint, float fallbackY, Transform ignoreRoot = null)
     {
         Vector3 origin = new Vector3(worldPoint.x, fallbackY + 200f, worldPoint.z);
         RaycastHit[] hits = Physics.RaycastAll(origin, Vector3.down, 400f, ~0, QueryTriggerInteraction.Ignore);
@@ -143,6 +220,11 @@ public static class TrapPlacement
 
         foreach (RaycastHit hit in hits)
         {
+            if (ignoreRoot != null && hit.transform.IsChildOf(ignoreRoot))
+            {
+                continue;
+            }
+
             float gap = Mathf.Abs(hit.point.y - fallbackY);
             if (gap < bestGap)
             {

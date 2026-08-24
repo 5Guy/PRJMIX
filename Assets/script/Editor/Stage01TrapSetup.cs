@@ -251,8 +251,7 @@ public static class Stage01TrapSetup
             trapObject = trapObject.parent;
         }
 
-        Collider anchor = TrapPlacement.ResolveAnchorCollider(trapObject.gameObject);
-        Vector3 target = anchor != null ? anchor.bounds.center : trapObject.position;
+        Vector3 target = TrapPlacement.ResolveAnchorPoint(trapObject.gameObject);
 
         Undo.RecordObject(bridge, "나무다리 옮기기");
 
@@ -442,12 +441,9 @@ public static class Stage01TrapSetup
         }
     }
 
-    // 함정이 실제로 판정을 하는 자리. 판정 콜라이더가 없으면(자동차) 뿌리를 쓴다.
+    // 함정이 서 있는 자리. 칸에 맞출 때와 같은 기준이라야 벌려 놓은 간격이 실제 간격과 맞는다.
     private static Vector3 TrapKillPoint(GameObject instance)
     {
-        Physics.SyncTransforms();
-
-        Collider anchor = TrapPlacement.ResolveAnchorCollider(instance);
-        return anchor != null ? anchor.bounds.center : instance.transform.position;
+        return TrapPlacement.ResolveAnchorPoint(instance);
     }
 }

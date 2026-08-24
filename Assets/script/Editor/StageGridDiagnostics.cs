@@ -363,8 +363,7 @@ public static class StageGridDiagnostics
 
         foreach (Transform trap in TrapCellAligner.CollectTrapRoots(SceneManager.GetActiveScene()))
         {
-            Collider anchor = TrapPlacement.ResolveAnchorCollider(trap.gameObject);
-            Vector3 point = anchor != null ? anchor.bounds.center : trap.position;
+            Vector3 point = TrapPlacement.ResolveAnchorPoint(trap.gameObject);
 
             Vector2Int cell = new Vector2Int(
                 Mathf.FloorToInt((point.x - origin.x) / cellSize),
@@ -492,8 +491,7 @@ public static class StageGridDiagnostics
                 continue;
             }
 
-            Collider anchorCollider = TrapPlacement.ResolveAnchorCollider(trap.gameObject);
-            Vector3 point = anchorCollider != null ? anchorCollider.bounds.center : trap.position;
+            Vector3 point = TrapPlacement.ResolveAnchorPoint(trap.gameObject);
 
             Vector2Int cell = new Vector2Int(
                 Mathf.FloorToInt((point.x - origin.x) / cellSize),
@@ -531,8 +529,9 @@ public static class StageGridDiagnostics
             // 물 함정은 규약을 들고 있는 중계기(WaterTrapTriggerRelay)를 Awake에서 붙이므로
             // 에디터에서는 아직 없다. 콜라이더가 칸 안에 있는지만 확인한다.
             bool isWaterTrap = trap.GetComponentInChildren<WaterTrap>(true) != null;
+            Collider anchorCollider = isWaterTrap ? TrapPlacement.ResolveAnchorCollider(trap.gameObject) : null;
 
-            if (!found && isWaterTrap && anchorCollider != null)
+            if (!found && anchorCollider != null)
             {
                 Bounds b = anchorCollider.bounds;
                 found = b.min.x <= cellCenter.x + cellSize * 0.5f && b.max.x >= cellCenter.x - cellSize * 0.5f
@@ -637,8 +636,7 @@ public static class StageGridDiagnostics
 
         foreach (Transform trap in TrapCellAligner.CollectTrapRoots(SceneManager.GetActiveScene()))
         {
-            Collider anchor = TrapPlacement.ResolveAnchorCollider(trap.gameObject);
-            Vector3 point = anchor != null ? anchor.bounds.center : trap.position;
+            Vector3 point = TrapPlacement.ResolveAnchorPoint(trap.gameObject);
             Vector3 center = TrapPlacement.SnapToCellCenter(point, origin, cellSize);
 
             float offX = Mathf.Abs(point.x - center.x);

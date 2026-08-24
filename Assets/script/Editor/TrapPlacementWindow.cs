@@ -371,9 +371,8 @@ public class TrapPlacementWindow : EditorWindow
         {
             if (alignCell)
             {
-                // 뿌리가 아니라 판정 콜라이더가 칸 한가운데에 오도록 맞춘다.
-                Collider anchor = TrapPlacement.ResolveAnchorCollider(target.gameObject);
-                Vector3 reference = anchor != null ? anchor.bounds.center : target.position;
+                // 뿌리가 아니라 함정이 실제로 서 있는 자리가 칸 한가운데에 오도록 맞춘다.
+                Vector3 reference = TrapPlacement.ResolveAnchorPoint(target.gameObject);
 
                 TrapPlacement.AlignHorizontally(target, ApplyPlanarRules(reference));
             }

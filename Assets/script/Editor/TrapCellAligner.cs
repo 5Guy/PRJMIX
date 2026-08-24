@@ -104,7 +104,7 @@ public static class TrapCellAligner
 
         foreach (Transform trap in traps)
         {
-            // 판정 콜라이더 한가운데가 지금 어느 칸에 있는지 보고, 그 칸의 한가운데로 옮긴다.
+            // 함정이 서 있는 자리가 지금 어느 칸인지 보고, 그 칸의 한가운데로 옮긴다.
             Vector3 current = AnchorPoint(trap);
             Vector3 target = TrapPlacement.SnapToCellCenter(current, origin, cellSize);
 
@@ -144,13 +144,10 @@ public static class TrapCellAligner
         return true;
     }
 
-    // 이 함정이 실제로 판정을 하는 자리. 판정 콜라이더가 없으면(자동차) 뿌리를 쓴다.
+    // 이 함정이 서 있는 자리. 계산은 TrapPlacement 한 곳에만 둔다.
     private static Vector3 AnchorPoint(Transform trap)
     {
-        Physics.SyncTransforms();
-
-        Collider anchor = TrapPlacement.ResolveAnchorCollider(trap.gameObject);
-        return anchor != null ? anchor.bounds.center : trap.position;
+        return TrapPlacement.ResolveAnchorPoint(trap.gameObject);
     }
 
     // 가로 위치가 목표와 같은지. 높이는 보지 않는다.

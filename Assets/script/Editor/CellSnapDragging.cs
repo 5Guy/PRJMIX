@@ -208,12 +208,12 @@ public static class CellSnapDragging
             TrapPlacement.AlignHorizontally(target, center);
         }
 
-        TrapPlacement.SnapToGround(target, TrapPlacement.SampleGroundY(center, groundFallbackY));
+        TrapPlacement.SnapToGround(target, TrapPlacement.SampleGroundY(center, groundFallbackY, target));
         EditorUtility.SetDirty(target);
     }
 
     // 이 오브젝트에서 "칸에 맞춰야 할 지점".
-    // 함정은 실제로 죽는 자리(판정 콜라이더)이지 뿌리가 아니다.
+    // 함정은 뿌리가 아니라 실제로 서 있는 자리(불은 불꽃, 나머지는 판정 콜라이더)다.
     private static Vector3 AnchorPoint(Transform target, bool isFlag)
     {
         if (isFlag)
@@ -221,10 +221,7 @@ public static class CellSnapDragging
             return target.position;
         }
 
-        Physics.SyncTransforms();
-
-        Collider anchor = TrapPlacement.ResolveAnchorCollider(target.gameObject);
-        return anchor != null ? anchor.bounds.center : target.position;
+        return TrapPlacement.ResolveAnchorPoint(target.gameObject);
     }
 
     // 지금 어느 칸에 들어가 있는지 보이도록 주변 격자를 그린다.
@@ -235,7 +232,7 @@ public static class CellSnapDragging
         int cellX = Mathf.FloorToInt((anchor.x - gridOrigin.x) / gridCellSize);
         int cellZ = Mathf.FloorToInt((anchor.z - gridOrigin.z) / gridCellSize);
 
-        float y = TrapPlacement.SampleGroundY(anchor, groundFallbackY) + 0.05f;
+        float y = TrapPlacement.SampleGroundY(anchor, groundFallbackY, target) + 0.05f;
 
         int minX = Mathf.Max(0, cellX - DrawRadius);
         int maxX = Mathf.Min(gridColumns, cellX + DrawRadius + 1);

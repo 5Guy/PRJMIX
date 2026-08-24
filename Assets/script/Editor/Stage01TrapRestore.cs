@@ -120,8 +120,7 @@ public static class Stage01TrapRestore
 
         foreach (Transform trap in TrapCellAligner.CollectTrapRoots(SceneManager.GetActiveScene()))
         {
-            Collider anchor = TrapPlacement.ResolveAnchorCollider(trap.gameObject);
-            Vector3 point = anchor != null ? anchor.bounds.center : trap.position;
+            Vector3 point = TrapPlacement.ResolveAnchorPoint(trap.gameObject);
 
             float ahead = Vector3.Dot(point - player.position, direction);
             float height = point.y - player.position.y;

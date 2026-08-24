@@ -953,7 +953,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 8750132777714325546, guid: 95d672d8b4803504d84764e3a8257dd0, type: 3}
       propertyPath: m_LocalPosition.x
-      value: -6.8490767
+      value: -6.2420616
       objectReference: {fileID: 0}
     - target: {fileID: 8750132777714325546, guid: 95d672d8b4803504d84764e3a8257dd0, type: 3}
       propertyPath: m_LocalPosition.y
@@ -961,7 +961,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 8750132777714325546, guid: 95d672d8b4803504d84764e3a8257dd0, type: 3}
       propertyPath: m_LocalPosition.z
-      value: 3.988048
+      value: 4.0113287
       objectReference: {fileID: 0}
     - target: {fileID: 8750132777714325546, guid: 95d672d8b4803504d84764e3a8257dd0, type: 3}
       propertyPath: m_LocalRotation.w
@@ -5910,6 +5910,40 @@ PrefabInstance:
     m_AddedGameObjects: []
     m_AddedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: b9a312277999f5240a0a0d44c097b938, type: 3}
+--- !u!1001 &900000000000000201
+PrefabInstance:
+  m_ObjectHideFlags: 0
+  serializedVersion: 2
+  m_Modification:
+    serializedVersion: 3
+    m_TransformParent: {fileID: 0}
+    m_Modifications:
+    - target: {fileID: 900000000000000101, guid: 0e7ca56dbd164239b606b0c105fee658, type: 3}
+      propertyPath: m_Name
+      value: StageIntroImage
+      objectReference: {fileID: 0}
+    m_RemovedComponents: []
+    m_RemovedGameObjects: []
+    m_AddedGameObjects: []
+    m_AddedComponents: []
+  m_SourcePrefab: {fileID: 100100000, guid: 0e7ca56dbd164239b606b0c105fee658, type: 3}
+--- !u!1001 &900000000000000401
+PrefabInstance:
+  m_ObjectHideFlags: 0
+  serializedVersion: 2
+  m_Modification:
+    serializedVersion: 3
+    m_TransformParent: {fileID: 0}
+    m_Modifications:
+    - target: {fileID: 900000000000000201, guid: 9a09efd6ed6d481fb2cfea5afff3bb90, type: 3}
+      propertyPath: m_Name
+      value: EncyclopediaSystem
+      objectReference: {fileID: 0}
+    m_RemovedComponents: []
+    m_RemovedGameObjects: []
+    m_AddedGameObjects: []
+    m_AddedComponents: []
+  m_SourcePrefab: {fileID: 100100000, guid: 9a09efd6ed6d481fb2cfea5afff3bb90, type: 3}
 --- !u!1 &1024988518701756546
 GameObject:
   m_ObjectHideFlags: 0
@@ -7506,40 +7540,6 @@ GameObject:
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
   m_IsActive: 1
---- !u!1001 &900000000000000201
-PrefabInstance:
-  m_ObjectHideFlags: 0
-  serializedVersion: 2
-  m_Modification:
-    serializedVersion: 3
-    m_TransformParent: {fileID: 0}
-    m_Modifications:
-    - target: {fileID: 900000000000000101, guid: 0e7ca56dbd164239b606b0c105fee658, type: 3}
-      propertyPath: m_Name
-      value: StageIntroImage
-      objectReference: {fileID: 0}
-    m_RemovedComponents: []
-    m_RemovedGameObjects: []
-    m_AddedGameObjects: []
-    m_AddedComponents: []
-  m_SourcePrefab: {fileID: 100100000, guid: 0e7ca56dbd164239b606b0c105fee658, type: 3}
---- !u!1001 &900000000000000401
-PrefabInstance:
-  m_ObjectHideFlags: 0
-  serializedVersion: 2
-  m_Modification:
-    serializedVersion: 3
-    m_TransformParent: {fileID: 0}
-    m_Modifications:
-    - target: {fileID: 900000000000000201, guid: 9a09efd6ed6d481fb2cfea5afff3bb90, type: 3}
-      propertyPath: m_Name
-      value: EncyclopediaSystem
-      objectReference: {fileID: 0}
-    m_RemovedComponents: []
-    m_RemovedGameObjects: []
-    m_AddedGameObjects: []
-    m_AddedComponents: []
-  m_SourcePrefab: {fileID: 100100000, guid: 9a09efd6ed6d481fb2cfea5afff3bb90, type: 3}
 --- !u!1660057539 &9223372036854775807
 SceneRoots:
   m_ObjectHideFlags: 0
