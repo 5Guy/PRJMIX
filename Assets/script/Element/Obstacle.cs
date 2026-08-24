@@ -100,12 +100,35 @@ public class Obstacle : MonoBehaviour
     {
         all.Add(this);
         CameraViewController.TopViewChanged += ApplyViewMode;
+
+        // 꺼져 있는 동안 시점이 바뀌었을 수 있다. 켜지는 순간 지금 시점에 다시 맞춘다.
+        if (icon != null)
+        {
+            icon.gameObject.SetActive(true);
+            ApplyViewMode(CameraViewController.IsTopView);
+        }
     }
 
     private void OnDisable()
     {
         all.Remove(this);
         CameraViewController.TopViewChanged -= ApplyViewMode;
+
+        // 아이콘은 장애물의 자식이 아니라 옆에 놓인 별개 오브젝트다.
+        // 여기서 같이 내리지 않으면 장애물이 꺼진 뒤에도 그림만 바닥에 남는다.
+        if (icon != null)
+        {
+            icon.gameObject.SetActive(false);
+        }
+    }
+
+    // 장애물이 사라지면 그림도 함께 치운다(자식이 아니라 따로 놓여 있어서 저절로 지워지지 않는다).
+    private void OnDestroy()
+    {
+        if (icon != null)
+        {
+            Destroy(icon.gameObject);
+        }
     }
 
     // 속성이 붙어 있을 때만 탑뷰/사선뷰에 따라 아이콘 ↔ 장애물 모습을 바꾼다.

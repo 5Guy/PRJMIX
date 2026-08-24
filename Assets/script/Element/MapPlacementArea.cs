@@ -20,10 +20,10 @@ public class MapPlacementArea : MonoBehaviour
     [Header("칸 크기 = 도로 폭 ÷ 칸 수")]
     [Tooltip("칸 크기의 기준이 되는 도로. 비워두면 아래 이름으로 씬에서 찾는다")]
     [SerializeField] private Transform road;
-    [Tooltip("플레이어가 걸어가는 도로 오브젝트 이름.\n" +
+    [Tooltip("플레이어가 걸어가는 도로 오브젝트 이름. 비워 두면 도로에 맞추지 않고 아래 '칸 크기'로 맵 전체를 고르게 덮는다.\n" +
              "Stage_01에서는 'Road_Lane_01'(폭 9.48m, 길이 130m)이 그 도로다.\n" +
              "'Road_Lane_02.001'은 도로망 전체(160x130m)라 기준으로 쓰면 안 된다")]
-    [SerializeField] private string roadObjectName = "Road_Lane_01";
+    [SerializeField] private string roadObjectName = "";
     [Tooltip("도로 폭에 칸이 몇 개 들어가게 할지. 도로 위 놓을 자리가 그만큼 생긴다")]
     [SerializeField] private PlacementGridLayout.RoadCells cellsAcrossRoad = PlacementGridLayout.RoadCells.Three;
     [Tooltip("도로 폭을 직접 정한다(m). 0이면 위 도로 오브젝트를 재서 자동으로 구한다.\n" +
@@ -159,6 +159,13 @@ public class MapPlacementArea : MonoBehaviour
 
         if (roadTransform == null)
         {
+            // 도로를 아예 지정하지 않았다면 "맵 전체를 고른 칸으로 덮는다"고 정한 것이다.
+            // 그때는 알릴 것이 없다. 이름을 적어 두었는데 못 찾은 경우에만 알린다.
+            if (road == null && string.IsNullOrEmpty(roadObjectName))
+            {
+                return;
+            }
+
             Debug.LogWarning(
                 $"{name}: 칸 크기의 기준이 될 도로('{roadObjectName}')를 찾지 못해 기본 칸 크기 {cellSize}m를 씁니다. " +
                 "도로 오브젝트를 물려 주거나 '도로 폭 직접 지정'에 폭을 적어 주세요.",

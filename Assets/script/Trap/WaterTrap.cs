@@ -1078,6 +1078,27 @@ public class WaterTrap : MonoBehaviour, IElementCounterTrap
         woodBridgeHomePosition = woodBridge.position;
         woodBridgeHomeScale = woodBridge.localScale;
         woodBridgeHomeKnown = true;
+
+        // 하늘에 매달려 있는 동안에는 아무것과도 부딪히지 않아야 한다.
+        //
+        // 다리는 물 함정 바로 위 20m 하늘에 떠서 떨어질 차례를 기다린다. 콜라이더가 켜져 있으면
+        // 그 칸에 원소를 놓을 때 바닥을 찾는 광선이 다리를 먼저 맞아서, 원소가 도로가 아니라
+        // 하늘의 다리 위에 얹힌다. 내려앉는 순간 다시 켜 준다(그때부터 밟고 건너야 하므로).
+        SetWoodBridgeSolid(false);
+    }
+
+    // 다리의 콜라이더를 한꺼번에 켜고 끈다.
+    private void SetWoodBridgeSolid(bool solid)
+    {
+        if (woodBridge == null)
+        {
+            return;
+        }
+
+        foreach (Collider collider in woodBridge.GetComponentsInChildren<Collider>(true))
+        {
+            collider.enabled = solid;
+        }
     }
 
     // 하늘에 떠 있던 다리를 물 위로 떨어뜨린다. 떨어뜨렸으면 true.
@@ -1136,6 +1157,10 @@ public class WaterTrap : MonoBehaviour, IElementCounterTrap
         }
 
         bridge.position = new Vector3(start.x, landingY, start.z);
+
+        // 내려앉았으니 이제부터는 밟고 건널 수 있어야 한다.
+        SetWoodBridgeSolid(true);
+
         SfxPlayer.PlayAt(woodBridgeLandSound, bridge.position, woodBridgeLandVolume);
 
         yield return SettleWoodBridge(bridge);
@@ -1158,6 +1183,9 @@ public class WaterTrap : MonoBehaviour, IElementCounterTrap
 
         woodBridge.position = woodBridgeHomePosition;
         woodBridge.localScale = woodBridgeHomeScale;
+
+        // 다시 하늘로 올라갔으니 또 아무것과도 부딪히지 않게 한다.
+        SetWoodBridgeSolid(false);
     }
 
     // 착지 순간 살짝 눌렸다가 펴진다. 무거운 것이 떨어진 느낌을 준다.
