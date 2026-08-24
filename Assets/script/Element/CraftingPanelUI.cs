@@ -220,7 +220,10 @@ public class CraftingPanelUI : MonoBehaviour
     // 마우스 휠은 목록 스크롤과 지도 확대(CameraViewController)에 쓰인다.
     private void HandleInput()
     {
-        if (StageFailPanel.IsOpen || IsLocked)
+        // 일시정지 메뉴가 떠 있는 동안에는 Tab을 받지 않는다.
+        // 조합창은 timeScale이 0이어도 unscaledDeltaTime으로 돌기 때문에,
+        // 막지 않으면 멈춰 둔 판 위에 창이 겹쳐 뜨고 그대로 조합·배치까지 된다.
+        if (StageFailPanel.IsOpen || PauseMenuManager.IsMenuOpen || IsLocked)
         {
             return;
         }
@@ -645,6 +648,7 @@ public class CraftingPanelUI : MonoBehaviour
         ScoreSystem.TakeOutMaterial();
 
         CraftToken token = CreateToken(dragLayer, data);
+        token.TakenFromList = true;
         MoveTokenToPointer(token, screenPosition);
         return token;
     }
@@ -728,13 +732,24 @@ public class CraftingPanelUI : MonoBehaviour
             return;
         }
 
-        // 그 밖(목록 위 등)에 놓으면 취소한 것으로 보고 점수를 돌려준 뒤 사라진다.
-        ScoreSystem.PutBackMaterial();
+        // 그 밖(목록 위 등)에 놓으면 취소한 것으로 보고 사라진다.
+        //
+        // 점수는 방금 목록에서 꺼낸 재료를 그대로 도로 넣었을 때만 돌려준다.
+        // 물에 한 번이라도 떴던 것까지 돌려주면, 조합해서 얻은 결과물을 여기에 버리는 것만으로
+        // 재료값보다 더 받는 셈이 되어 점수를 얼마든지 벌 수 있다.
+        if (token.TakenFromList)
+        {
+            ScoreSystem.PutBackMaterial();
+        }
+
         Destroy(token.gameObject);
     }
 
     private void DropIntoWater(CraftToken token, Vector2 screenPosition)
     {
+        // 물에 놓인 순간부터는 "꺼내 온 그대로"가 아니다. 다시 끌어내 버려도 점수는 돌아오지 않는다.
+        token.TakenFromList = false;
+
         token.Rect.SetParent(waterLayer, false);
 
         FloatingElement bubble = token.GetComponent<FloatingElement>();

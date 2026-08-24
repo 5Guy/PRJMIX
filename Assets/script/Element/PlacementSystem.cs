@@ -1,4 +1,5 @@
 using System.Collections;
+using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.EventSystems;
 #if ENABLE_INPUT_SYSTEM
@@ -129,6 +130,11 @@ public class PlacementSystem : MonoBehaviour
 
     private CraftingPanelUI craftingPanel;
 
+    // 출발 전에 놓은 쓰나미는 출발 신호를 기다리는 "예약"으로 남는다.
+    // 회수하거나 죽어서 판이 처음으로 돌아가면 이 예약도 함께 거두어야
+    // 놓지도 않은 파도가 뒤늦게 밀려오는 일이 없다.
+    private readonly List<System.Action> pendingSurges = new List<System.Action>();
+
     public bool IsPlacing => current != null;
 
     public void Setup(PlacementGrid placementGrid, Transform playerTransform, CameraViewController view, Camera camera)
@@ -149,6 +155,12 @@ public class PlacementSystem : MonoBehaviour
         StageReset.Requested -= HandleStageReset;
     }
 
+    // 정적 이벤트에 걸어 둔 예약은 씬을 내려도 살아남는다. 다음 판으로 넘어가기 전에 거둔다.
+    private void OnDestroy()
+    {
+        CancelAllPendingSurges();
+    }
+
     // 죽어서 다시 시작할 때는 맵을 처음 상태로 되돌린다.
     // 놓아 둔 원소·흙 벽은 전부 치우고 조합창으로 돌려준다.
     private void HandleStageReset(StageReset.Reason reason)
@@ -162,6 +174,9 @@ public class PlacementSystem : MonoBehaviour
         {
             Cancel();
         }
+
+        // 놓아 둔 것을 전부 걷어내므로, 기다리던 파도도 남김없이 거둔다.
+        CancelAllPendingSurges();
 
         foreach (PlacedElement placed in PlacedElement.All)
         {
@@ -291,6 +306,12 @@ public class PlacementSystem : MonoBehaviour
         if (data == null)
         {
             return;
+        }
+
+        // 놓았던 쓰나미가 조합창으로 돌아왔으면 기다리던 파도도 함께 거둔다.
+        if (data.ElementType == tsunamiElement)
+        {
+            CancelOnePendingSurge();
         }
 
         if (craftingPanel == null)
@@ -818,13 +839,41 @@ public class PlacementSystem : MonoBehaviour
                 "출발 신호가 없으면 파도는 오지 않습니다.", this);
         }
 
-        void OnStarted()
+        System.Action started = null;
+        started = () =>
         {
-            StageStartButton.StageStarted -= OnStarted;
+            StageStartButton.StageStarted -= started;
+            pendingSurges.Remove(started);
             CounterEffectRunner.Run(SurgeAfterDelay(wave, groundPosition));
+        };
+
+        pendingSurges.Add(started);
+        StageStartButton.StageStarted += started;
+    }
+
+    // 예약해 둔 파도 하나를 거둔다. (놓았던 쓰나미를 도로 회수했을 때)
+    // 파도는 어느 것이나 똑같이 플레이어 등 뒤에서 오므로 어느 예약을 거두든 결과는 같다.
+    private void CancelOnePendingSurge()
+    {
+        if (pendingSurges.Count == 0)
+        {
+            return;
         }
 
-        StageStartButton.StageStarted += OnStarted;
+        System.Action pending = pendingSurges[pendingSurges.Count - 1];
+        pendingSurges.RemoveAt(pendingSurges.Count - 1);
+        StageStartButton.StageStarted -= pending;
+    }
+
+    // 예약을 전부 거둔다. (죽어서 판이 처음으로 돌아갈 때, 그리고 씬을 내릴 때)
+    private void CancelAllPendingSurges()
+    {
+        foreach (System.Action pending in pendingSurges)
+        {
+            StageStartButton.StageStarted -= pending;
+        }
+
+        pendingSurges.Clear();
     }
 
     private IEnumerator SurgeAfterDelay(TsunamiWave wave, Vector3 groundPosition)

@@ -12,6 +12,11 @@ public class CraftToken : MonoBehaviour, IBeginDragHandler, IDragHandler, IEndDr
     public ElementData Data { get; private set; }
     public RectTransform Rect { get; private set; }
 
+    // 왼쪽 목록에서 막 꺼내 와 아직 조합창의 물에 한 번도 놓이지 않은 재료인지.
+    // 이 상태로 버린 것만 "꺼낸 것을 도로 넣었다"로 보고 점수를 돌려준다.
+    // 물에 뜬 뒤에는(조합 결과물 포함) 꺼낸 값을 이미 치른 것이므로 돌려주지 않는다.
+    public bool TakenFromList { get; set; }
+
     private CraftingPanelUI owner;
     private bool spawnCopyOnDrag;
     private CraftToken dragTarget;
