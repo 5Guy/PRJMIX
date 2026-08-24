@@ -6722,6 +6722,23 @@ Transform:
   - {fileID: 1506385988}
   m_Father: {fileID: 5622968416872691718}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!1001 &900000000000000201
+PrefabInstance:
+  m_ObjectHideFlags: 0
+  serializedVersion: 2
+  m_Modification:
+    serializedVersion: 3
+    m_TransformParent: {fileID: 0}
+    m_Modifications:
+    - target: {fileID: 900000000000000101, guid: 0e7ca56dbd164239b606b0c105fee658, type: 3}
+      propertyPath: m_Name
+      value: StageIntroImage
+      objectReference: {fileID: 0}
+    m_RemovedComponents: []
+    m_RemovedGameObjects: []
+    m_AddedGameObjects: []
+    m_AddedComponents: []
+  m_SourcePrefab: {fileID: 100100000, guid: 0e7ca56dbd164239b606b0c105fee658, type: 3}
 --- !u!1660057539 &9223372036854775807
 SceneRoots:
   m_ObjectHideFlags: 0
@@ -6747,3 +6764,4 @@ SceneRoots:
   - {fileID: 812628388}
   - {fileID: 899883885}
   - {fileID: 495847306}
+  - {fileID: 900000000000000201}
