@@ -71,8 +71,14 @@ public static class CarCounterBuilder
             material.SetFloat("_Smoothness", 0.85f);
         }
 
+        // 예전엔 칸 지름의 1.6배로 세워 두어, 기울인 조각까지 더하면 3.5m가 넘었다.
+        // 차를 막는 구실은 흙 돌담(2m)과 같은데 혼자만 두 배로 솟아 뒤쪽 칸을 가렸다.
+        // 돌담보다도 낮은 무릎 높이로 낮춰 시야를 열어 둔다.
+        //
+        // 폭은 줄이지 않는다. 차는 이 조각들의 콜라이더에 닿아야 멈추므로,
+        // 칸 폭보다 좁아지면 가장자리로 스쳐 지나갈 수 있다.
         float width = cellSize * 0.9f;
-        float height = cellSize * 1.6f;
+        float height = cellSize * 0.62f;
 
         // 가운데 큰 기둥 하나 + 양옆으로 기운 조각 둘.
         AddShard(wall.transform, material, new Vector3(0f, height * 0.5f, 0f),

@@ -31,8 +31,10 @@ public static class ElementGridShot
     //  흙은 놓는 자리에 돌담을 세운다). 넣어 봐야 빈 칸만 찍힌다.
     public static readonly string[] Picks =
     {
-        "Mountain", "Wood", "Forest",
-        "Ore", "Volcano", "Rust",
+        // 이번엔 흑요석 크기를 본다. 혼자 찍으면 줄었는지 알 수 없으니
+        // 키를 견줄 이웃(우뚝한 화산, 자잘한 녹과 광석)을 옆에 함께 놓는다.
+        "Obsidian", "Volcano", "Mountain",
+        "Rust", "Ore", "Iron",
     };
 
     // 밀려오는 쓰나미 파도를 몇 장 찍는다.
