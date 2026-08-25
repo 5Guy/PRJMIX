@@ -3,6 +3,9 @@ using UnityEngine;
 
 // 원소 모델을 세울 때 쓰는 도형 공장.
 //
+// 에디터 폴더에 있었지만 런타임으로 옮겼다. 밀려오는 쓰나미 파도(TsunamiWave)도
+// 같은 Wave 도형을 써야 놓아 둔 원소와 몰려오는 파도가 같은 물건으로 보인다.
+//
 // 유니티 기본 도형(정육면체·구·원기둥)만으로는 불꽃·결정·파도처럼 "이름이 읽히는" 모양을
 // 만들 수 없다. 여기서 필요한 몇 가지를 직접 짜서 만든다.
 // 만든 메시는 ElementModelBuilder가 에셋으로 저장해 프리팹에 물린다.
@@ -152,12 +155,23 @@ public static class ElementMeshFactory
     //
     // 옆에서 본 곡선을 하나 그려 두고 그 선을 따라 폭이 있는 띠를 세운다.
     // 위로 갈수록 얇아지고 앞으로 말려서, 옆에서 보면 갈고리처럼 휘어 보인다.
-    public static Mesh Wave(string name, float width, float height, float curl, int steps)
+    // taper 는 마루로 갈수록 폭이 줄어드는 정도다(0이면 아래위가 같은 폭).
+    //
+    // 폭이 일정하면 파도가 아니라 휘어진 판때기로 보인다. 실제로 밀려오는 물마루는
+    // 양 끝이 얇게 스러지면서 가운데만 높이 솟는다. 그 실루엣이 있어야 파도로 읽힌다.
+    // thickness 는 밑동의 앞뒤 두께다. 마루로 갈수록 얇아진다.
+    //
+    // 미터로 적는 값이라 파도 크기에 맞춰 줘야 한다. 손바닥만 한 원소에 쓰던 두께를
+    // 도로를 덮는 14m 짜리 파도에 그대로 쓰면 종이 한 장처럼 보인다.
+    public static Mesh Wave(string name, float width, float height, float curl, int steps, float taper = 0f, float thickness = 0.16f)
     {
         List<Vector3> vertices = new List<Vector3>();
         List<int> triangles = new List<int>();
 
         float half = width * 0.5f;
+
+        // t 자리에서의 반폭. 위로 갈수록 빠르게 줄어들도록 제곱을 쓴다.
+        float HalfAt(float t) => half * (1f - taper * t * t);
 
         Vector3 PointAt(float t, float thicknessScale)
         {
@@ -173,45 +187,52 @@ public static class ElementMeshFactory
             float t1 = (i + 1) / (float)steps;
 
             // 밑동은 두껍고 마루는 얇다.
-            float d0 = Mathf.Lerp(0.16f, 0.03f, t0);
-            float d1 = Mathf.Lerp(0.16f, 0.03f, t1);
+            float d0 = Mathf.Lerp(thickness, thickness * 0.19f, t0);
+            float d1 = Mathf.Lerp(thickness, thickness * 0.19f, t1);
 
             Vector3 back0 = PointAt(t0, -d0);
             Vector3 front0 = PointAt(t0, d0);
             Vector3 back1 = PointAt(t1, -d1);
             Vector3 front1 = PointAt(t1, d1);
 
+            float half0 = HalfAt(t0);
+            float half1 = HalfAt(t1);
+
             for (int side = 0; side < 2; side++)
             {
-                float x = side == 0 ? -half : half;
-                Vector3 offset = new Vector3(x, 0f, 0f);
+                float sign = side == 0 ? -1f : 1f;
+                Vector3 offset0 = new Vector3(sign * half0, 0f, 0f);
+                Vector3 offset1 = new Vector3(sign * half1, 0f, 0f);
 
                 if (side == 0)
                 {
                     AddQuad(vertices, triangles,
-                        back0 + offset, front0 + offset, front1 + offset, back1 + offset);
+                        back0 + offset0, front0 + offset0, front1 + offset1, back1 + offset1);
                 }
                 else
                 {
                     AddQuad(vertices, triangles,
-                        back1 + offset, front1 + offset, front0 + offset, back0 + offset);
+                        back1 + offset1, front1 + offset1, front0 + offset0, back0 + offset0);
                 }
             }
 
-            Vector3 left = new Vector3(-half, 0f, 0f);
-            Vector3 right = new Vector3(half, 0f, 0f);
+            Vector3 left0 = new Vector3(-half0, 0f, 0f);
+            Vector3 right0 = new Vector3(half0, 0f, 0f);
+            Vector3 left1 = new Vector3(-half1, 0f, 0f);
+            Vector3 right1 = new Vector3(half1, 0f, 0f);
 
             // 앞면과 뒷면
-            AddQuad(vertices, triangles, front0 + left, front0 + right, front1 + right, front1 + left);
-            AddQuad(vertices, triangles, back0 + right, back0 + left, back1 + left, back1 + right);
+            AddQuad(vertices, triangles, front0 + left0, front0 + right0, front1 + right1, front1 + left1);
+            AddQuad(vertices, triangles, back0 + right0, back0 + left0, back1 + left1, back1 + right1);
         }
 
         // 마루 끝을 막는다.
-        Vector3 capBack = PointAt(1f, -0.03f);
-        Vector3 capFront = PointAt(1f, 0.03f);
+        float capHalf = HalfAt(1f);
+        Vector3 capBack = PointAt(1f, -thickness * 0.19f);
+        Vector3 capFront = PointAt(1f, thickness * 0.19f);
         AddQuad(vertices, triangles,
-            capBack + new Vector3(-half, 0f, 0f), capFront + new Vector3(-half, 0f, 0f),
-            capFront + new Vector3(half, 0f, 0f), capBack + new Vector3(half, 0f, 0f));
+            capBack + new Vector3(-capHalf, 0f, 0f), capFront + new Vector3(-capHalf, 0f, 0f),
+            capFront + new Vector3(capHalf, 0f, 0f), capBack + new Vector3(capHalf, 0f, 0f));
 
         return Build(name, vertices, triangles);
     }

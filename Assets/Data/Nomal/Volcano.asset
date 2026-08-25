@@ -19,3 +19,4 @@ MonoBehaviour:
   icon: {fileID: 21300000, guid: e4010b083018ace4fb67b9dc93665f8b, type: 3}
   description: "\uD654\uC0B0\uC6D0\uC18C \uBD88+\uBD88"
   worldModel: {fileID: 7112953906146394140, guid: 15c0bf2ab57fa1b459ce4cdbd2f62273, type: 3}
+  worldScale: 1

@@ -25,6 +25,10 @@ public static class ElementModelBuilder
     private const string MeshFolder = OutputFolder + "/Meshes";
     private const string MaterialFolder = OutputFolder + "/Materials";
 
+    // 나무·숲이 함께 쓰는 나무 한 그루. 통나무 대신 이걸 심는다.
+    private const string TreePrefab =
+        "Assets/Pandazole_Ultimate_Pack/Pandazole Nature Environment Pack/Prefabs/Tree_01_Spring.prefab";
+
     // ───────────────────────────── 색 ─────────────────────────────
 
     private static readonly Color SoilBrown = new Color(0.42f, 0.29f, 0.17f);
@@ -50,8 +54,14 @@ public static class ElementModelBuilder
     private static readonly Color SteamWhite = new Color(0.90f, 0.94f, 0.98f);
     private static readonly Color AshGrey = new Color(0.60f, 0.59f, 0.57f);
     private static readonly Color CinderBlack = new Color(0.18f, 0.17f, 0.18f);
-    private static readonly Color MountainRock = new Color(0.63f, 0.64f, 0.69f);
-    private static readonly Color SnowWhite = new Color(0.94f, 0.96f, 1f);
+    private static readonly Color MountainGreen = new Color(0.24f, 0.42f, 0.23f);
+    private static readonly Color MountainGreenLight = new Color(0.35f, 0.57f, 0.28f);
+    private static readonly Color VolcanoBrown = new Color(0.45f, 0.28f, 0.17f);
+    private static readonly Color VolcanoBrownDark = new Color(0.33f, 0.20f, 0.12f);
+    private static readonly Color LavaDeep = new Color(0.78f, 0.16f, 0.02f);
+    private static readonly Color OreRock = new Color(0.55f, 0.53f, 0.50f);
+    private static readonly Color DiamondBlue = new Color(0.16f, 0.55f, 0.85f);
+    private static readonly Color DiamondPale = new Color(0.36f, 0.76f, 0.96f);
     private static readonly Color GrassGreen = new Color(0.35f, 0.68f, 0.28f);
     private static readonly Color GrassDeep = new Color(0.25f, 0.53f, 0.21f);
     private static readonly Color WoodHandle = new Color(0.55f, 0.38f, 0.22f);
@@ -78,24 +88,24 @@ public static class ElementModelBuilder
 
         int built = 0;
 
-        foreach (KeyValuePair<string, System.Func<GameObject>> recipe in Recipes())
+        foreach (ModelRecipe recipe in Recipes())
         {
-            GameObject model = recipe.Value();
-            model.name = recipe.Key;
+            GameObject model = recipe.Build();
+            model.name = recipe.Name;
 
             StripColliders(model);
 
-            string prefabPath = $"{OutputFolder}/{recipe.Key}.prefab";
+            string prefabPath = $"{OutputFolder}/{recipe.Name}.prefab";
             GameObject prefab = PrefabUtility.SaveAsPrefabAsset(model, prefabPath);
             Object.DestroyImmediate(model);
 
             if (prefab == null)
             {
-                Debug.LogError($"[원소 모델] '{recipe.Key}' 프리팹을 저장하지 못했습니다.");
+                Debug.LogError($"[원소 모델] '{recipe.Name}' 프리팹을 저장하지 못했습니다.");
                 continue;
             }
 
-            if (Assign(recipe.Key, prefab))
+            if (Assign(recipe.Name, prefab, recipe.Scale))
             {
                 built++;
             }
@@ -107,8 +117,11 @@ public static class ElementModelBuilder
         Debug.Log($"[원소 모델] {built}개를 새로 만들어 원소에 물렸습니다. ({OutputFolder})");
     }
 
-    // 새로 만들 원소와 그 모양.
-    private static IEnumerable<KeyValuePair<string, System.Func<GameObject>>> Recipes()
+    // 새로 만들 원소와 그 모양, 그리고 놓일 때의 크기 배율.
+    //
+    // 배율을 따로 두는 까닭: 모델은 모두 칸 하나에 맞춰 줄어들기 때문에, 그대로 두면
+    // 산도 녹 조각도 화면에서 크기가 똑같다. 산은 우뚝해야 하고 녹은 자잘해야 한다.
+    private static IEnumerable<ModelRecipe> Recipes()
     {
         yield return Recipe("Water", BuildWater);
         yield return Recipe("Earth", BuildEarth);
@@ -120,21 +133,38 @@ public static class ElementModelBuilder
         yield return Recipe("Ash", BuildAsh);
         yield return Recipe("Iron", BuildIron);
         yield return Recipe("Steel", BuildSteel);
-        yield return Recipe("Rust", BuildRust);
+        yield return Recipe("Rust", BuildRust, 0.80f);
         yield return Recipe("Obsidian", BuildObsidian);
-        yield return Recipe("Mountain", BuildMountain);
+        yield return Recipe("Mountain", BuildMountain, 1.55f);
         yield return Recipe("Volcano", BuildVolcano);
         yield return Recipe("Grass", BuildGrass);
         yield return Recipe("Tool", BuildTool);
+        yield return Recipe("Ore", BuildOre);
+        yield return Recipe("Wood", BuildWood);
+        yield return Recipe("Forest", BuildForest, 1.45f);
     }
 
-    private static KeyValuePair<string, System.Func<GameObject>> Recipe(string name, System.Func<GameObject> build)
+    private static ModelRecipe Recipe(string name, System.Func<GameObject> build, float scale = 1f)
     {
-        return new KeyValuePair<string, System.Func<GameObject>>(name, build);
+        return new ModelRecipe(name, build, scale);
+    }
+
+    private readonly struct ModelRecipe
+    {
+        public readonly string Name;
+        public readonly System.Func<GameObject> Build;
+        public readonly float Scale;
+
+        public ModelRecipe(string name, System.Func<GameObject> build, float scale)
+        {
+            Name = name;
+            Build = build;
+            Scale = scale;
+        }
     }
 
     // 만든 프리팹을 ElementData의 "월드 모델" 칸에 물린다.
-    private static bool Assign(string elementName, GameObject prefab)
+    private static bool Assign(string elementName, GameObject prefab, float scale)
     {
         string path = $"{ElementFolder}/{elementName}.asset";
         ElementData data = AssetDatabase.LoadAssetAtPath<ElementData>(path);
@@ -147,6 +177,7 @@ public static class ElementModelBuilder
 
         SerializedObject serialized = new SerializedObject(data);
         serialized.FindProperty("worldModel").objectReferenceValue = prefab;
+        serialized.FindProperty("worldScale").floatValue = scale;
         serialized.ApplyModifiedPropertiesWithoutUndo();
         EditorUtility.SetDirty(data);
         return true;
@@ -273,22 +304,50 @@ public static class ElementModelBuilder
     {
         GameObject root = new GameObject("Tsunami");
 
-        Disc(root, "Sea", 0.52f, 0.05f, new Vector3(0f, 0f, -0.14f), WaterBlue, 0.7f);
+        Disc(root, "Sea", 0.55f, 0.05f, new Vector3(0f, 0f, -0.10f), WaterBlue, 0.7f);
 
-        // 얇게 서서 앞으로 말려 넘어가는 물마루
-        Mesh wave = ElementMeshFactory.Wave("Element_TsunamiWave", 0.86f, 0.80f, 0.52f, 14);
-        Part(root, "Crest", wave, new Vector3(0f, 0.02f, -0.30f), Vector3.zero, Vector3.one, WaterBlue, 0.8f);
+        // Wave 메시는 +z 쪽으로 말린다. 그런데 게임 카메라는 -z 쪽에서 내려다보므로
+        // 그대로 두면 말려 넘어가는 앞면이 아니라 밋밋한 등짝만 보인다. 통째로 돌려 세운다.
+        //
+        // 프리팹 뿌리를 돌려 두면 소용없다 — ElementVisual.CreateWorldModel 이 놓을 때
+        // 뿌리의 회전을 지운다. 한 겹 안쪽에 돌린 것을 두어야 살아남는다.
+        GameObject facing = new GameObject("Facing");
+        facing.transform.SetParent(root.transform, false);
+        facing.transform.localRotation = Quaternion.Euler(0f, 180f, 0f);
 
-        // 마루 앞을 받치는 물살
-        Mesh swell = ElementMeshFactory.Wave("Element_TsunamiSwell", 0.86f, 0.42f, 0.24f, 10);
-        Part(root, "Swell", swell, new Vector3(0f, 0.01f, -0.34f), Vector3.zero, Vector3.one, WaterLight, 0.8f);
+        // 얇게 서서 앞으로 말려 넘어가는 물마루.
+        // taper 를 주어 양 끝이 스러지게 한다. 폭이 일정하면 파도가 아니라 판때기다.
+        Mesh wave = ElementMeshFactory.Wave("Element_TsunamiWave", 0.82f, 0.66f, 0.44f, 14, 0.50f);
+        Part(facing, "Crest", wave, new Vector3(0f, 0.02f, -0.26f), Vector3.zero, Vector3.one, WaterBlue, 0.8f);
 
-        // 말려 넘어가는 마루의 하얀 거품
-        Sphere(root, "Foam1", new Vector3(0f, 0.76f, 0.19f), new Vector3(0.84f, 0.16f, 0.20f), SteamWhite, 0.6f);
-        Sphere(root, "Foam2", new Vector3(0.24f, 0.70f, 0.24f), Vector3.one * 0.15f, SteamWhite, 0.6f);
-        Sphere(root, "Foam3", new Vector3(-0.27f, 0.66f, 0.21f), Vector3.one * 0.12f, SteamWhite, 0.6f);
+        // 마루 앞으로 밀려 나온 물살.
+        // 예전에는 마루 바로 뒤(z -0.34)에 두었는데, 마루가 더 크고 앞에 있어 통째로 가려
+        // 화면에 한 번도 나온 적이 없었다. 앞으로 빼야 파도가 두 겹으로 밀려오는 것이 보인다.
+        Mesh swell = ElementMeshFactory.Wave("Element_TsunamiSwell", 0.66f, 0.17f, 0.10f, 10, 0.70f);
+        Part(facing, "Swell", swell, new Vector3(0f, 0.01f, 0.26f), Vector3.zero, Vector3.one, WaterLight, 0.8f);
+
+        // 말려 넘어가는 입술에서 부서지는 거품.
+        //
+        // 납작한 흰 타원 하나를 얹어 두었더니 거품이 아니라 물감을 칠한 자국으로 보였다.
+        // 크기가 제각각인 덩어리를 입술을 따라 물려 놓아야 부서지는 것으로 읽힌다.
+        // 마루 끝(y 0.68, z 0.18)에 걸쳐 놓는다. 면 한가운데에 두면 벽에 붙은 물방울로 보인다.
+        Foam(facing, "Foam1", new Vector3(0.00f, 0.67f, 0.19f), 0.17f);
+        Foam(facing, "Foam2", new Vector3(0.16f, 0.65f, 0.17f), 0.13f);
+        Foam(facing, "Foam3", new Vector3(-0.17f, 0.64f, 0.16f), 0.12f);
+        Foam(facing, "Foam4", new Vector3(0.28f, 0.57f, 0.13f), 0.09f);
+        Foam(facing, "Foam5", new Vector3(-0.29f, 0.55f, 0.12f), 0.08f);
+
+        // 입술에서 떨어져 내리는 물보라
+        Foam(facing, "Spray1", new Vector3(0.07f, 0.50f, 0.25f), 0.07f);
+        Foam(facing, "Spray2", new Vector3(-0.11f, 0.41f, 0.24f), 0.05f);
 
         return root;
+    }
+
+    // 부서지는 물거품 덩어리 하나. 조금 눌러 놓아야 공처럼 보이지 않는다.
+    private static void Foam(GameObject root, string name, Vector3 position, float size)
+    {
+        Sphere(root, name, position, new Vector3(size, size * 0.72f, size * 0.86f), SteamWhite, 0.6f);
     }
 
     // ───────────────────────────── 용암 ─────────────────────────────
@@ -445,12 +504,14 @@ public static class ElementModelBuilder
     {
         GameObject root = new GameObject("Mountain");
 
-        Cone(root, "Peak", 0.50f, 0.03f, 0.82f, 7, Vector3.zero, MountainRock, 0.1f);
-        Cone(root, "SnowCap", 0.25f, 0.02f, 0.40f, 7, new Vector3(0f, 0.45f, 0f), SnowWhite, 0.2f);
+        // 만년설이 덮인 회색 봉우리가 아니라 나무가 우거진 초록 산.
+        // 위쪽을 조금 밝은 초록으로 덮어 두어야 덩어리 하나로 뭉개지지 않고 능선이 보인다.
+        Cone(root, "Peak", 0.50f, 0.03f, 0.90f, 7, Vector3.zero, MountainGreen, 0.06f);
+        Cone(root, "Ridge", 0.26f, 0.02f, 0.44f, 7, new Vector3(0f, 0.47f, 0f), MountainGreenLight, 0.06f);
 
         // 옆에 붙은 작은 봉우리 — 하나만 있으면 고깔모자처럼 보인다.
-        Cone(root, "SidePeak", 0.26f, 0.02f, 0.44f, 6, new Vector3(0.34f, 0f, 0.16f), MountainRock, 0.1f);
-        Cone(root, "SideSnow", 0.14f, 0.01f, 0.22f, 6, new Vector3(0.34f, 0.24f, 0.16f), SnowWhite, 0.2f);
+        Cone(root, "SidePeak", 0.26f, 0.02f, 0.48f, 6, new Vector3(0.34f, 0f, 0.16f), MountainGreen, 0.06f);
+        Cone(root, "SideRidge", 0.14f, 0.01f, 0.24f, 6, new Vector3(0.34f, 0.26f, 0.16f), MountainGreenLight, 0.06f);
 
         return root;
     }
@@ -459,43 +520,169 @@ public static class ElementModelBuilder
     {
         GameObject root = new GameObject("Volcano");
 
-        // 꼭대기가 뚫린 원뿔 = 분화구
-        Cone(root, "Cone", 0.50f, 0.20f, 0.62f, 9, Vector3.zero, RockDark, 0.1f, null, false);
+        // 꼭대기가 뚫린 원뿔 = 분화구. 새까맣던 것을 진한 갈색으로 바꾼다.
+        Cone(root, "Cone", 0.50f, 0.20f, 0.62f, 9, Vector3.zero, VolcanoBrown, 0.08f, null, false);
+        Cone(root, "Skirt", 0.56f, 0.50f, 0.09f, 9, Vector3.zero, VolcanoBrownDark, 0.08f);
         Disc(root, "Crater", 0.165f, 0.025f, new Vector3(0f, 0.545f, 0f), LavaGlow, 0.3f, LavaGlow);
 
-        // 옆으로 흘러내리는 용암 줄기.
-        //
-        // 산비탈에 딱 붙여야 한다. 공중에 세워 두면 화산이 아니라
-        // 팔다리를 벌린 사람처럼 보인다. 비탈 기울기를 계산해서 그대로 눕힌다.
-        LavaFlow(root, "Flow1", 40f, 0.065f);
-        LavaFlow(root, "Flow2", 200f, 0.055f);
-        LavaFlow(root, "Flow3", 300f, 0.045f);
+        // 분화구 턱을 넘어 비탈을 타고 흘러내리는 용암.
+        LavaFlow(root, "Flow1", 215f, 11);
+        LavaFlow(root, "Flow2", 335f, 10);
+        LavaFlow(root, "Flow3", 95f, 9);
 
-        // 뿜어 오른 덩어리
-        Sphere(root, "Bomb1", new Vector3(0.07f, 0.70f, 0.02f), Vector3.one * 0.10f, LavaGlow, 0.3f, LavaGlow);
-        Sphere(root, "Bomb2", new Vector3(-0.10f, 0.64f, 0.08f), Vector3.one * 0.07f, LavaGlow, 0.3f, LavaGlow);
+        // 분화구 언저리에 튄 용암. 예전에는 공중에 띄워 두어 막대사탕처럼 보였다.
+        Sphere(root, "Splash1", new Vector3(0.10f, 0.58f, 0.04f), Vector3.one * 0.075f, LavaGlow, 0.3f, LavaGlow);
+        Sphere(root, "Splash2", new Vector3(-0.09f, 0.56f, 0.09f), Vector3.one * 0.055f, LavaGlow, 0.3f, LavaGlow);
 
         return root;
     }
 
     // 분화구에서 밑동까지 비탈을 타고 흘러내리는 용암 한 줄기.
-    private static void LavaFlow(GameObject root, string name, float yaw, float width)
+    //
+    // 예전에는 길쭉한 상자 하나를 비탈에 눕혀 두었다. 상자는 모서리가 곧아서
+    // 산에 붙여 놓아도 흘러내리는 것이 아니라 꽂아 둔 막대기로 보였다.
+    // 작은 덩어리를 비탈을 따라 겹치도록 촘촘히 놓으면 줄기가 이어져 흐르는 것으로 읽힌다.
+    // 아래로 내려갈수록 넓게 퍼지고, 식어서 색이 어두워진다.
+    private static void LavaFlow(GameObject root, string name, float yaw, int drops)
     {
         const float BottomRadius = 0.50f;
         const float TopRadius = 0.20f;
         const float Height = 0.62f;
 
-        // 비탈면의 기울기. 위로 갈수록 안쪽으로 들어오므로 그만큼 눕힌다.
+        // 비탈면의 기울기와 길이. 위로 갈수록 안쪽으로 들어오므로 그만큼 눕혀야 면에 붙는다.
         float slope = Mathf.Atan2(BottomRadius - TopRadius, Height) * Mathf.Rad2Deg;
         float length = Mathf.Sqrt(Height * Height + (BottomRadius - TopRadius) * (BottomRadius - TopRadius));
 
-        // 비탈 한가운데를 잡아 살짝 바깥으로 띄운다. 딱 붙이면 산에 파묻혀 안 보인다.
-        Vector3 middle = new Vector3(0f, Height * 0.5f, (BottomRadius + TopRadius) * 0.5f + 0.005f);
-        Vector3 spot = Quaternion.Euler(0f, yaw, 0f) * middle;
+        // 한 토막의 길이. 칸 수보다 넉넉히 잡아 앞뒤가 겹치게 한다. 겹치지 않으면 구슬을 꿴 것처럼 보인다.
+        float segment = length / drops * 3f;
 
-        // 유니티의 오일러각은 Y를 마지막에 돌린다. (slope, yaw, 0)이면 비탈로 눕힌 뒤 옆으로 돌리는 셈이다.
-        Box(root, name, spot, new Vector3(width, length * 0.92f, 0.02f),
-            new Vector3(slope, yaw, 0f), LavaGlow, 0.3f, LavaGlow);
+        for (int i = 0; i < drops; i++)
+        {
+            // 0이 분화구 턱, 1이 밑동.
+            //
+            // 토막이 간격보다 길기 때문에 맨 위와 맨 아래는 안쪽으로 물려 놓아야 한다.
+            // 끝까지 채우면 위로는 분화구 위로 뿔처럼 삐져나오고 아래로는 땅을 뚫는다.
+            float t = Mathf.Lerp(0.17f, 0.94f, i / (float)(drops - 1));
+
+            float y = Mathf.Lerp(Height - 0.03f, 0.02f, t);
+            float radius = Mathf.Lerp(TopRadius, BottomRadius, t);
+
+            // 비탈을 따라 조금씩 휘어 내려간다. 곧게 떨어지면 다시 막대기가 된다.
+            float turn = yaw + Mathf.Sin(t * 3.4f) * 3f;
+
+            // radius 는 원뿔 꼭짓점까지의 거리라 면 한가운데보다 바깥이다.
+            // 그대로 쓰면 줄기가 비탈에서 떠서 산 언저리에 구슬을 붙여 놓은 꼴이 된다.
+            // 면까지 끌어당긴 뒤 반쯤 파묻어, 비탈에 팬 골을 타고 흐르는 것처럼 만든다.
+            Vector3 spot = Quaternion.Euler(0f, turn, 0f) * new Vector3(0f, y, radius * 0.90f);
+
+            // 아래로 갈수록 넓게 퍼지고, 식어서 어두워진다.
+            float width = Mathf.Lerp(0.07f, 0.17f, t);
+            Color glow = Color.Lerp(LavaGlow, LavaDeep, t);
+
+            // 유니티의 오일러각은 Y를 마지막에 돌린다. (slope, turn, 0)이면 비탈로 눕힌 뒤 옆으로 돌리는 셈이다.
+            // 늘이는 축은 로컬 Y라서, 눕히고 나면 그대로 비탈을 타고 내려가는 방향이 된다.
+            Primitive(root, $"{name}_{i}", PrimitiveType.Sphere, spot,
+                new Vector3(slope, turn, 0f), new Vector3(width, segment, 0.045f), glow, 0.3f, glow);
+        }
+    }
+
+    // ───────────────────────────── 광석 ─────────────────────────────
+
+    // 바위에 박힌 다이아몬드.
+    //
+    // 에셋 팩의 Jem_01 을 물려 두었더니 납작하게 누운 노란 판이라, 광석이 아니라
+    // 버터 한 조각처럼 보였다. 돌덩이를 깔고 그 위에 보석을 세워 둔다.
+    private static GameObject BuildOre()
+    {
+        GameObject root = new GameObject("Ore");
+
+        MoundPart(root, "Rock", 0.40f, 0.24f, 8, 2, 0.20f, 7007, OreRock, 0.12f);
+        Sphere(root, "Chip", new Vector3(-0.28f, 0.07f, 0.17f), Vector3.one * 0.14f, OreRock, 0.12f);
+        Sphere(root, "Chip2", new Vector3(0.26f, 0.05f, -0.20f), Vector3.one * 0.11f, OreRock, 0.12f);
+
+        Diamond(root, "Gem", 0.19f, new Vector3(0.02f, 0.33f, -0.01f));
+
+        return root;
+    }
+
+    // 브릴리언트 컷 보석 하나.
+    // 허리(girdle)를 기준으로 위는 상판까지 좁아지는 낮은 사다리꼴, 아래는 한 점으로 모이는 뿔이다.
+    private static void Diamond(GameObject root, string name, float radius, Vector3 girdle)
+    {
+        // 아래쪽 뿔. 원뿔은 위로 뻗으므로 통째로 뒤집어 끝이 땅을 향하게 한다.
+        Mesh pavilion = ElementMeshFactory.Cone($"Element_{root.name}_{name}Pavilion", radius, radius * 0.06f, radius * 1.2f, 8);
+        Part(root, $"{name}Pavilion", pavilion, girdle, new Vector3(180f, 0f, 0f), Vector3.one, DiamondBlue, 0.9f);
+
+        // 위쪽 크라운.
+        Mesh crown = ElementMeshFactory.Cone($"Element_{root.name}_{name}Crown", radius, radius * 0.55f, radius * 0.42f, 8);
+        Part(root, $"{name}Crown", crown, girdle, Vector3.zero, Vector3.one, DiamondPale, 0.95f);
+    }
+
+    // ───────────────────────────── 나무 / 숲 ─────────────────────────────
+
+    // 나무 한 그루. 통나무 대신 숲에 선 것과 같은 나무를 세운다.
+    private static GameObject BuildWood()
+    {
+        GameObject root = new GameObject("Wood");
+        PlantTree(root, "Tree", Vector3.zero, 0f, 1f);
+        return root;
+    }
+
+    // 같은 나무를 여러 그루 심어 빽빽한 숲으로 만든다.
+    //
+    // 간격은 나무 한 그루의 실제 폭을 재서 잡는다. 에셋마다 미터 단위가 제각각이라
+    // 0.3 같은 숫자를 그대로 쓰면 한 점에 겹치거나 저 멀리 흩어진다.
+    private static GameObject BuildForest()
+    {
+        GameObject root = new GameObject("Forest");
+
+        GameObject first = PlantTree(root, "Tree1", Vector3.zero, 0f, 1f);
+
+        if (first == null)
+        {
+            return root;
+        }
+
+        float step = ElementVisual.MeasureBounds(first).size.x;
+
+        // 나무 폭의 배수로 적어 둔 자리. 1보다 작게 두어 가지가 서로 겹치게 한다.
+        (Vector3 spot, float yaw, float scale)[] others =
+        {
+            (new Vector3(0.62f, 0f, 0.34f), 60f, 0.80f),
+            (new Vector3(-0.58f, 0f, 0.30f), 145f, 0.86f),
+            (new Vector3(0.30f, 0f, -0.58f), 220f, 0.76f),
+            (new Vector3(-0.34f, 0f, -0.54f), 300f, 0.90f),
+            (new Vector3(0.06f, 0f, 0.72f), 25f, 0.68f),
+            (new Vector3(-0.74f, 0f, -0.10f), 190f, 0.72f),
+        };
+
+        for (int i = 0; i < others.Length; i++)
+        {
+            PlantTree(root, $"Tree{i + 2}", others[i].spot * step, others[i].yaw, others[i].scale);
+        }
+
+        return root;
+    }
+
+    // 에셋 팩의 나무를 프리팹 연결 없이 통째로 복제해 심는다.
+    // 프리팹 인스턴스로 넣으면 콜라이더를 떼어 낸 것이 덮어쓰기로 남아 지저분해진다.
+    private static GameObject PlantTree(GameObject root, string name, Vector3 position, float yaw, float scale)
+    {
+        GameObject source = AssetDatabase.LoadAssetAtPath<GameObject>(TreePrefab);
+
+        if (source == null)
+        {
+            Debug.LogError($"[원소 모델] 나무 프리팹을 찾지 못했습니다: {TreePrefab}");
+            return null;
+        }
+
+        GameObject tree = (GameObject)Object.Instantiate(source);
+        tree.name = name;
+        tree.transform.SetParent(root.transform, false);
+        tree.transform.localPosition = position;
+        tree.transform.localRotation = Quaternion.Euler(0f, yaw, 0f);
+        tree.transform.localScale = Vector3.one * scale;
+        return tree;
     }
 
     // ───────────────────────────── 풀 ─────────────────────────────

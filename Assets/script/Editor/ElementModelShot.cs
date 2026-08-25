@@ -19,6 +19,7 @@ public static class ElementModelShot
 
     private const int Tile = 256;
     private const int Columns = 6;
+    private const int EachTile = 512;
 
     // 놓았을 때의 지름. PlacementSystem 기본값(칸 0.85배)과 같은 자리에서 본다.
     private const float Diameter = 1f;
@@ -63,7 +64,7 @@ public static class ElementModelShot
             order.AppendLine($"  {row + 1}줄 {column + 1}칸 : {data.name} ({data.ElementName}) " +
                              $"모델 {(data.WorldModel != null ? AssetDatabase.GetAssetPath(data.WorldModel) : "없음")}");
 
-            Texture2D shot = ShootOne(data);
+            Texture2D shot = ShootOne(data, Tile);
 
             // Texture2D의 (0,0)은 왼쪽 아래다. 표는 왼쪽 위부터 채워 넣는다.
             int destinationY = (rows - 1 - row) * Tile;
@@ -81,6 +82,53 @@ public static class ElementModelShot
 
         Debug.Log(order.ToString());
         Debug.Log($"[원소 그림] 저장했습니다: {path}");
+    }
+
+    // 대조표 말고 원소마다 한 장씩 따로 저장한다. 하나하나 크게 들여다볼 때 쓴다.
+    //
+    //   Unity.exe -batchmode -projectPath . -quit -executeMethod ElementModelShot.ShootEach
+    public static void ShootEach()
+    {
+        if (SystemInfo.graphicsDeviceType == GraphicsDeviceType.Null)
+        {
+            Debug.LogError("[원소 그림] 그래픽 장치가 없습니다. -nographics 없이 실행해 주세요.");
+            return;
+        }
+
+        EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
+        List<ElementData> elements = LoadElements();
+
+        GameObject lightObject = new GameObject("Light");
+        Light light = lightObject.AddComponent<Light>();
+        light.type = LightType.Directional;
+        light.intensity = 1.3f;
+        lightObject.transform.rotation = Quaternion.Euler(38f, -140f, 0f);
+
+        GameObject floor = GameObject.CreatePrimitive(PrimitiveType.Plane);
+        floor.name = "Floor";
+        floor.transform.localScale = Vector3.one * 2f;
+        floor.GetComponent<Renderer>().sharedMaterial = WorldVisual.CreateLit(new Color(0.5f, 0.52f, 0.55f));
+
+        string directory = Path.Combine(Path.GetTempPath(), "MolraElementShot", "each");
+        Directory.CreateDirectory(directory);
+
+        System.Text.StringBuilder order = new System.Text.StringBuilder();
+        order.AppendLine("[원소 그림] 원소별 낱장:");
+
+        for (int i = 0; i < elements.Count; i++)
+        {
+            ElementData data = elements[i];
+            Texture2D shot = ShootOne(data, EachTile);
+            string path = Path.Combine(directory, $"{i + 1:00}_{data.name}.png");
+            File.WriteAllBytes(path, shot.EncodeToPNG());
+            Object.DestroyImmediate(shot);
+
+            order.AppendLine($"  {path} : {data.name} ({data.ElementName}) " +
+                             $"모델 {(data.WorldModel != null ? AssetDatabase.GetAssetPath(data.WorldModel) : "없음")}");
+        }
+
+        Debug.Log(order.ToString());
+        Debug.Log($"[원소 그림] 낱장을 저장했습니다: {directory}");
     }
 
     private static List<ElementData> LoadElements()
@@ -101,7 +149,7 @@ public static class ElementModelShot
     }
 
     // 맵에 놓았을 때와 똑같이 세운 뒤 비스듬히 내려다보며 한 장 찍는다.
-    private static Texture2D ShootOne(ElementData data)
+    private static Texture2D ShootOne(ElementData data, int size)
     {
         GameObject holder = new GameObject($"Shot_{data.name}");
         Transform model = ElementVisual.CreateWorldModel(data, holder.transform, Vector3.zero, Diameter);
@@ -131,8 +179,8 @@ public static class ElementModelShot
         cameraObject.transform.position = focus - angle * Vector3.forward * 6f;
         cameraObject.transform.rotation = angle;
 
-        RenderTexture target = new RenderTexture(Tile, Tile, 24, RenderTextureFormat.ARGB32);
-        Texture2D shot = new Texture2D(Tile, Tile, TextureFormat.RGB24, false);
+        RenderTexture target = new RenderTexture(size, size, 24, RenderTextureFormat.ARGB32);
+        Texture2D shot = new Texture2D(size, size, TextureFormat.RGB24, false);
 
         try
         {
@@ -150,7 +198,7 @@ public static class ElementModelShot
 
             RenderTexture previous = RenderTexture.active;
             RenderTexture.active = target;
-            shot.ReadPixels(new Rect(0, 0, Tile, Tile), 0, 0);
+            shot.ReadPixels(new Rect(0, 0, size, size), 0, 0);
             shot.Apply();
             RenderTexture.active = previous;
         }

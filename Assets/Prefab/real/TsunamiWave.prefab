@@ -44,7 +44,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 732fe7bc64f995349a732c12c91683f1, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  wavePrefab: {fileID: 919132149155446097, guid: e4490fb7fd418d64d8add8ec768e2feb, type: 3}
+  wavePrefab: {fileID: 0}
   waveWidth: 14
   spawnBehind: 14
   speed: 18

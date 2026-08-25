@@ -25,6 +25,10 @@ public class ElementData : ScriptableObject
              "비워두면 원소 색 구가 대신 놓인다. 크기는 칸에 맞춰 자동으로 줄인다")]
     [SerializeField] private GameObject worldModel;
 
+    [Tooltip("칸 크기에 맞춘 다음 한 번 더 곱하는 배율. 1이면 칸에 꽉 차게 놓인다. " +
+             "산처럼 우뚝해야 하는 것은 크게, 녹처럼 작아야 하는 것은 작게 잡는다")]
+    [SerializeField] private float worldScale = 1f;
+
     public string ElementName => elementName;
     public ElementType ElementType => elementType;
     public bool IsBaseElement => isBaseElement;
@@ -32,4 +36,7 @@ public class ElementData : ScriptableObject
     public Sprite Icon => icon;
     public string Description => description;
     public GameObject WorldModel => worldModel;
+
+    // 이 값이 생기기 전에 만든 에셋에는 칸이 비어 0으로 읽힌다. 그때는 예전처럼 칸 크기 그대로 놓는다.
+    public float WorldScale => worldScale > 0.01f ? worldScale : 1f;
 }

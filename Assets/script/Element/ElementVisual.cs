@@ -123,6 +123,11 @@ public static class ElementVisual
         Bounds bounds = MeasureBounds(model);
         float longest = Mathf.Max(bounds.size.x, Mathf.Max(bounds.size.y, bounds.size.z));
         float fit = longest > 0.0001f ? diameter / longest : 1f;
+
+        // 여기까지는 모든 모델이 칸 하나에 똑같이 맞춰진다. 그래서 산도 자갈도 크기가 같아 보인다.
+        // 원소마다 정해 둔 배율을 한 번 더 먹여야 산은 우뚝하고 녹은 자잘하게 놓인다.
+        fit *= data.WorldScale;
+
         model.transform.localScale = Vector3.one * fit;
 
         // 피벗이 어디에 박혀 있든 칸 한가운데 바닥에 바로 서도록 경계 기준으로 놓는다.
